@@ -124,8 +124,8 @@ class PetDashboardScreen extends ConsumerWidget {
         PetModuleItem(
           icon: Icons.folder_outlined,
           title: l10n.moduleDocumentsTitle,
-          description: '',
-          onTap: () {},
+          description: l10n.moduleDocumentsDescription,
+          onTap: () => context.push('/pets/${pet.id}/documents'),
         ),
       );
     }

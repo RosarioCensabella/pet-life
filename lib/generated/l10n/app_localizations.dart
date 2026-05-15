@@ -500,6 +500,12 @@ abstract class AppLocalizations {
   /// **'Documenti'**
   String get moduleDocumentsTitle;
 
+  /// No description provided for @moduleDocumentsDescription.
+  ///
+  /// In it, this message translates to:
+  /// **'Archivia referti, libretti, ricette e assicurazioni.'**
+  String get moduleDocumentsDescription;
+
   /// No description provided for @moduleHealthDiaryTitle.
   ///
   /// In it, this message translates to:
@@ -793,6 +799,168 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Filtra per pet'**
   String get filterByPet;
+
+  /// No description provided for @documentsTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Documenti'**
+  String get documentsTitle;
+
+  /// No description provided for @addDocument.
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiungi documento'**
+  String get addDocument;
+
+  /// No description provided for @addDocumentTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Nuovo documento'**
+  String get addDocumentTitle;
+
+  /// No description provided for @documentTitleLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Titolo documento'**
+  String get documentTitleLabel;
+
+  /// No description provided for @documentTitleHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Es. Libretto vaccinale'**
+  String get documentTitleHint;
+
+  /// No description provided for @documentTitleRequired.
+  ///
+  /// In it, this message translates to:
+  /// **'Inserisci un titolo'**
+  String get documentTitleRequired;
+
+  /// No description provided for @documentCategoryLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Categoria'**
+  String get documentCategoryLabel;
+
+  /// No description provided for @documentCategoryHealthRecord.
+  ///
+  /// In it, this message translates to:
+  /// **'Libretto sanitario'**
+  String get documentCategoryHealthRecord;
+
+  /// No description provided for @documentCategoryLabReport.
+  ///
+  /// In it, this message translates to:
+  /// **'Referto'**
+  String get documentCategoryLabReport;
+
+  /// No description provided for @documentCategoryPrescription.
+  ///
+  /// In it, this message translates to:
+  /// **'Ricetta'**
+  String get documentCategoryPrescription;
+
+  /// No description provided for @documentCategoryInsurance.
+  ///
+  /// In it, this message translates to:
+  /// **'Assicurazione'**
+  String get documentCategoryInsurance;
+
+  /// No description provided for @documentCategoryInvoice.
+  ///
+  /// In it, this message translates to:
+  /// **'Fattura'**
+  String get documentCategoryInvoice;
+
+  /// No description provided for @documentCategoryOther.
+  ///
+  /// In it, this message translates to:
+  /// **'Altro'**
+  String get documentCategoryOther;
+
+  /// No description provided for @selectDocumentFile.
+  ///
+  /// In it, this message translates to:
+  /// **'Seleziona file'**
+  String get selectDocumentFile;
+
+  /// No description provided for @selectedDocumentFile.
+  ///
+  /// In it, this message translates to:
+  /// **'File selezionato'**
+  String get selectedDocumentFile;
+
+  /// No description provided for @documentFileRequired.
+  ///
+  /// In it, this message translates to:
+  /// **'Seleziona un file'**
+  String get documentFileRequired;
+
+  /// No description provided for @documentNotesLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Note'**
+  String get documentNotesLabel;
+
+  /// No description provided for @documentNotesHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Opzionale'**
+  String get documentNotesHint;
+
+  /// No description provided for @saveDocument.
+  ///
+  /// In it, this message translates to:
+  /// **'Salva documento'**
+  String get saveDocument;
+
+  /// No description provided for @documentSaved.
+  ///
+  /// In it, this message translates to:
+  /// **'Documento salvato'**
+  String get documentSaved;
+
+  /// No description provided for @noDocumentsTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun documento'**
+  String get noDocumentsTitle;
+
+  /// No description provided for @noDocumentsDescription.
+  ///
+  /// In it, this message translates to:
+  /// **'Archivia documenti utili come libretto sanitario, referti, ricette, fatture o assicurazioni.'**
+  String get noDocumentsDescription;
+
+  /// No description provided for @openDocument.
+  ///
+  /// In it, this message translates to:
+  /// **'Apri'**
+  String get openDocument;
+
+  /// No description provided for @deleteDocument.
+  ///
+  /// In it, this message translates to:
+  /// **'Elimina'**
+  String get deleteDocument;
+
+  /// No description provided for @deleteDocumentConfirmTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Eliminare questo documento?'**
+  String get deleteDocumentConfirmTitle;
+
+  /// No description provided for @deleteDocumentConfirmMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Il documento verrà rimosso dall\'archivio locale di Pet Life.'**
+  String get deleteDocumentConfirmMessage;
+
+  /// No description provided for @documentDeleted.
+  ///
+  /// In it, this message translates to:
+  /// **'Documento eliminato'**
+  String get documentDeleted;
 }
 
 class _AppLocalizationsDelegate

@@ -219,6 +219,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get moduleDocumentsTitle => 'Documenti';
 
   @override
+  String get moduleDocumentsDescription =>
+      'Archivia referti, libretti, ricette e assicurazioni.';
+
+  @override
   String get moduleHealthDiaryTitle => 'Diario salute';
 
   @override
@@ -366,4 +370,87 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get filterByPet => 'Filtra per pet';
+
+  @override
+  String get documentsTitle => 'Documenti';
+
+  @override
+  String get addDocument => 'Aggiungi documento';
+
+  @override
+  String get addDocumentTitle => 'Nuovo documento';
+
+  @override
+  String get documentTitleLabel => 'Titolo documento';
+
+  @override
+  String get documentTitleHint => 'Es. Libretto vaccinale';
+
+  @override
+  String get documentTitleRequired => 'Inserisci un titolo';
+
+  @override
+  String get documentCategoryLabel => 'Categoria';
+
+  @override
+  String get documentCategoryHealthRecord => 'Libretto sanitario';
+
+  @override
+  String get documentCategoryLabReport => 'Referto';
+
+  @override
+  String get documentCategoryPrescription => 'Ricetta';
+
+  @override
+  String get documentCategoryInsurance => 'Assicurazione';
+
+  @override
+  String get documentCategoryInvoice => 'Fattura';
+
+  @override
+  String get documentCategoryOther => 'Altro';
+
+  @override
+  String get selectDocumentFile => 'Seleziona file';
+
+  @override
+  String get selectedDocumentFile => 'File selezionato';
+
+  @override
+  String get documentFileRequired => 'Seleziona un file';
+
+  @override
+  String get documentNotesLabel => 'Note';
+
+  @override
+  String get documentNotesHint => 'Opzionale';
+
+  @override
+  String get saveDocument => 'Salva documento';
+
+  @override
+  String get documentSaved => 'Documento salvato';
+
+  @override
+  String get noDocumentsTitle => 'Nessun documento';
+
+  @override
+  String get noDocumentsDescription =>
+      'Archivia documenti utili come libretto sanitario, referti, ricette, fatture o assicurazioni.';
+
+  @override
+  String get openDocument => 'Apri';
+
+  @override
+  String get deleteDocument => 'Elimina';
+
+  @override
+  String get deleteDocumentConfirmTitle => 'Eliminare questo documento?';
+
+  @override
+  String get deleteDocumentConfirmMessage =>
+      'Il documento verrà rimosso dall\'archivio locale di Pet Life.';
+
+  @override
+  String get documentDeleted => 'Documento eliminato';
 }

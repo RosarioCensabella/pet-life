@@ -1,6 +1,8 @@
 import 'package:go_router/go_router.dart';
 
 import '../features/calendar/presentation/calendar_screen.dart';
+import '../features/documents/presentation/add_document_screen.dart';
+import '../features/documents/presentation/documents_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/pets/presentation/add_pet_screen.dart';
@@ -59,6 +61,22 @@ GoRouter buildAppRouter() {
           final petId = state.pathParameters['petId']!;
 
           return AddReminderScreen(petId: petId);
+        },
+      ),
+      GoRoute(
+        path: '/pets/:petId/documents',
+        builder: (context, state) {
+          final petId = state.pathParameters['petId']!;
+
+          return DocumentsScreen(petId: petId);
+        },
+      ),
+      GoRoute(
+        path: '/pets/:petId/documents/new',
+        builder: (context, state) {
+          final petId = state.pathParameters['petId']!;
+
+          return AddDocumentScreen(petId: petId);
         },
       ),
     ],

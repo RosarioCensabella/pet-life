@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pet_life/app/pet_life_app.dart';
 import 'package:pet_life/core/notifications/reminder_notification_scheduler.dart';
 import 'package:pet_life/core/notifications/reminder_notification_scheduler_provider.dart';
+import 'package:pet_life/features/documents/application/document_file_service.dart';
+import 'package:pet_life/features/documents/application/document_file_service_provider.dart';
 import 'package:pet_life/features/reminders/domain/reminder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -52,6 +54,9 @@ void main() {
         overrides: [
           reminderNotificationSchedulerProvider.overrideWithValue(
             FakeReminderNotificationScheduler(),
+          ),
+          documentFileServiceProvider.overrideWithValue(
+            FakeDocumentFileService(),
           ),
         ],
         child: const PetLifeApp(
@@ -100,7 +105,7 @@ void main() {
     expect(find.textContaining('Europeo'), findsOneWidget);
   });
 
-  testWidgets('Dashboard shows reminders module now that feature is enabled', (
+  testWidgets('Dashboard shows enabled complete modules only', (
     tester,
   ) async {
     await _setLargeTestViewport(tester);
@@ -112,7 +117,7 @@ void main() {
     expect(find.text('Cosa vuoi fare?'), findsOneWidget);
     expect(find.text('Profilo'), findsOneWidget);
     expect(find.text('Promemoria'), findsOneWidget);
-    expect(find.text('Documenti'), findsNothing);
+    expect(find.text('Documenti'), findsOneWidget);
     expect(find.text('Diario salute'), findsNothing);
     expect(find.text('Farmaci'), findsNothing);
   });
@@ -172,6 +177,75 @@ void main() {
     expect(find.text('Tutti i pet'), findsOneWidget);
     expect(find.text('Vaccino annuale'), findsOneWidget);
     expect(find.text('Luna'), findsWidgets);
+  });
+
+  testWidgets('User can add, open and delete a document', (
+    tester,
+  ) async {
+    final fakeDocumentFileService = FakeDocumentFileService();
+
+    await _setLargeTestViewport(tester);
+    await _pumpPetLifeApp(
+      tester,
+      documentFileService: fakeDocumentFileService,
+    );
+
+    await tester.tap(find.text('Accetta e continua'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Aggiungi pet'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'Luna');
+    await tester.enterText(find.byType(TextFormField).at(1), '3');
+
+    await _tapSavePet(tester);
+
+    await tester.tap(find.text('Luna'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Documenti'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nessun documento'), findsOneWidget);
+
+    await tester.tap(find.text('Aggiungi documento').first);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextFormField).at(0),
+      'Libretto vaccinale',
+    );
+
+    await tester.tap(find.text('Seleziona file'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('libretto.pdf'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Salva documento'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Salva documento'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Libretto vaccinale'), findsOneWidget);
+    expect(find.text('libretto.pdf'), findsOneWidget);
+
+    await tester.tap(find.text('Apri'));
+    await tester.pumpAndSettle();
+
+    expect(fakeDocumentFileService.openedPaths, isNotEmpty);
+
+    await tester.tap(find.text('Elimina'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Eliminare questo documento?'), findsOneWidget);
+
+    await tester.tap(find.text('Elimina').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nessun documento'), findsOneWidget);
+    expect(fakeDocumentFileService.deletedPaths, isNotEmpty);
   });
 
   testWidgets('User can postpone and skip reminders', (
@@ -304,12 +378,18 @@ Future<void> _setLargeTestViewport(WidgetTester tester) async {
   });
 }
 
-Future<void> _pumpPetLifeApp(WidgetTester tester) async {
+Future<void> _pumpPetLifeApp(
+  WidgetTester tester, {
+  DocumentFileService? documentFileService,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         reminderNotificationSchedulerProvider.overrideWithValue(
           FakeReminderNotificationScheduler(),
+        ),
+        documentFileServiceProvider.overrideWithValue(
+          documentFileService ?? FakeDocumentFileService(),
         ),
       ],
       child: const PetLifeApp(
@@ -376,5 +456,32 @@ class FakeReminderNotificationScheduler
   @override
   Future<void> cancelReminder(String reminderId) async {
     cancelledReminderIds.add(reminderId);
+  }
+}
+
+class FakeDocumentFileService implements DocumentFileService {
+  final openedPaths = <String>[];
+  final deletedPaths = <String>[];
+
+  @override
+  Future<PickedLocalDocument?> pickAndCopyDocument({
+    required String petId,
+    required String documentId,
+  }) async {
+    return PickedLocalDocument(
+      originalFileName: 'libretto.pdf',
+      localPath: 'fake/path/$petId/$documentId/libretto.pdf',
+      sizeBytes: 1024,
+    );
+  }
+
+  @override
+  Future<void> openDocument(String localPath) async {
+    openedPaths.add(localPath);
+  }
+
+  @override
+  Future<void> deleteDocument(String localPath) async {
+    deletedPaths.add(localPath);
   }
 }

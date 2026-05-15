@@ -218,6 +218,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get moduleDocumentsTitle => 'Documents';
 
   @override
+  String get moduleDocumentsDescription =>
+      'Archive reports, records, prescriptions and insurance files.';
+
+  @override
   String get moduleHealthDiaryTitle => 'Health diary';
 
   @override
@@ -365,4 +369,87 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get filterByPet => 'Filter by pet';
+
+  @override
+  String get documentsTitle => 'Documents';
+
+  @override
+  String get addDocument => 'Add document';
+
+  @override
+  String get addDocumentTitle => 'New document';
+
+  @override
+  String get documentTitleLabel => 'Document title';
+
+  @override
+  String get documentTitleHint => 'E.g. Vaccination booklet';
+
+  @override
+  String get documentTitleRequired => 'Enter a title';
+
+  @override
+  String get documentCategoryLabel => 'Category';
+
+  @override
+  String get documentCategoryHealthRecord => 'Health record';
+
+  @override
+  String get documentCategoryLabReport => 'Lab report';
+
+  @override
+  String get documentCategoryPrescription => 'Prescription';
+
+  @override
+  String get documentCategoryInsurance => 'Insurance';
+
+  @override
+  String get documentCategoryInvoice => 'Invoice';
+
+  @override
+  String get documentCategoryOther => 'Other';
+
+  @override
+  String get selectDocumentFile => 'Select file';
+
+  @override
+  String get selectedDocumentFile => 'Selected file';
+
+  @override
+  String get documentFileRequired => 'Select a file';
+
+  @override
+  String get documentNotesLabel => 'Notes';
+
+  @override
+  String get documentNotesHint => 'Optional';
+
+  @override
+  String get saveDocument => 'Save document';
+
+  @override
+  String get documentSaved => 'Document saved';
+
+  @override
+  String get noDocumentsTitle => 'No documents';
+
+  @override
+  String get noDocumentsDescription =>
+      'Archive useful files such as health records, lab reports, prescriptions, invoices or insurance documents.';
+
+  @override
+  String get openDocument => 'Open';
+
+  @override
+  String get deleteDocument => 'Delete';
+
+  @override
+  String get deleteDocumentConfirmTitle => 'Delete this document?';
+
+  @override
+  String get deleteDocumentConfirmMessage =>
+      'The document will be removed from Pet Life’s local archive.';
+
+  @override
+  String get documentDeleted => 'Document deleted';
 }

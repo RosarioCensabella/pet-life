@@ -21,6 +21,9 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 - shared_preferences per persistenza locale iniziale
 - flutter_local_notifications per notifiche locali
 - timezone + flutter_timezone per scheduling locale
+- file_picker per selezione file
+- path_provider per archivio locale app
+- open_filex per apertura documenti
 
 ## Stato progetto
 
@@ -52,12 +55,18 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 - Home con prossime scadenze
 - Calendario globale cross-pet
 - Filtro calendario per pet
+- Modello locale `PetDocument`
+- Archivio documenti locale per pet
+- Selezione file
+- Apertura documento
+- Eliminazione documento
 
 ### Prossima fase
 
 - Miglioramento UX permessi notifiche
-- Preparazione modulo Documenti
-- Upload locale foto/PDF
+- Data export locale
+- Impostazioni account/privacy
+- Preparazione store readiness
 
 ## Comandi principali
 
