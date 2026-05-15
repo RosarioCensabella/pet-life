@@ -12,6 +12,8 @@ class FeatureFlags {
     required this.expensesModuleEnabled,
     required this.insuranceModuleEnabled,
     required this.reportsModuleEnabled,
+    required this.subscriptionModuleEnabled,
+    required this.storePurchaseActionsEnabled,
   });
 
   final bool petProfileModuleEnabled;
@@ -26,6 +28,8 @@ class FeatureFlags {
   final bool expensesModuleEnabled;
   final bool insuranceModuleEnabled;
   final bool reportsModuleEnabled;
+  final bool subscriptionModuleEnabled;
+  final bool storePurchaseActionsEnabled;
 }
 
 const defaultFeatureFlags = FeatureFlags(
@@ -41,4 +45,6 @@ const defaultFeatureFlags = FeatureFlags(
   expensesModuleEnabled: false,
   insuranceModuleEnabled: false,
   reportsModuleEnabled: false,
+  subscriptionModuleEnabled: true,
+  storePurchaseActionsEnabled: false,
 );

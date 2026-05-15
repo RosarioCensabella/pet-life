@@ -13,6 +13,7 @@ import 'package:pet_life/features/settings/application/app_data_service.dart';
 import 'package:pet_life/features/settings/application/app_data_service_provider.dart';
 import 'package:pet_life/features/settings/domain/app_data_export_result.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pet_life/features/settings/data/local_app_data_service.dart';
 
 void main() {
   setUp(() {
@@ -295,42 +296,88 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Esporta dati'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('Export completato'), findsOneWidget);
     expect(find.textContaining('pet_life_export.json'), findsOneWidget);
     expect(fakeAppDataService.exportCalled, isTrue);
   });
 
-  testWidgets('Settings can delete local data', (
+
+
+  testWidgets('Settings shows Premium plans without fake purchase actions', (
     tester,
   ) async {
-    final fakeAppDataService = FakeAppDataService();
-
     await _setLargeTestViewport(tester);
-    _seedPetWithUpcomingReminder();
+    await _pumpPetLifeApp(tester);
 
-    await _openHome(
-      tester,
-      appDataService: fakeAppDataService,
-    );
-
-    expect(find.text('Luna'), findsOneWidget);
+    await tester.tap(find.text('Accetta e continua'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Impostazioni').first);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Elimina dati locali'));
+    expect(find.text('Abbonamento'), findsOneWidget);
+    expect(find.text('Scopri Premium'), findsOneWidget);
+    expect(find.textContaining('Piano attuale: Free'), findsOneWidget);
+
+    await tester.tap(find.text('Scopri Premium'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Eliminare tutti i dati locali?'), findsOneWidget);
+    expect(find.text('Pet Life Premium'), findsOneWidget);
+    expect(find.text('3,99 €/mese'), findsOneWidget);
 
-    await tester.tap(find.text('Elimina tutto'));
-    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await tester.pump(const Duration(milliseconds: 300));
 
-    expect(fakeAppDataService.clearCalled, isTrue);
-    expect(find.text('Aggiungi il tuo primo animale'), findsOneWidget);
+    expect(find.text('29,99 €/anno'), findsOneWidget);
+    expect(find.text('Ripristina acquisti'), findsNothing);
   });
+
+
+
+
+
+
+
+
+    test('LocalAppDataService clears local data', () async {
+      SharedPreferences.setMockInitialValues({
+        'pet_life_pets_v1': '[{"id":"pet-1","name":"Luna"}]',
+        'pet_life_reminders_v1': '[{"id":"reminder-1","title":"Vaccino annuale"}]',
+        'pet_life_documents_v1': '[]',
+      });
+
+      final preferences = await SharedPreferences.getInstance();
+      final service = LocalAppDataService(preferences: preferences);
+
+      await service.clearLocalData();
+
+      expect(preferences.getString('pet_life_pets_v1'), isNull);
+      expect(preferences.getString('pet_life_reminders_v1'), isNull);
+      expect(preferences.getString('pet_life_documents_v1'), isNull);
+    });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   testWidgets('User can postpone and skip reminders', (
     tester,

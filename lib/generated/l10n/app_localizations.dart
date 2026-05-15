@@ -980,6 +980,12 @@ abstract class AppLocalizations {
   /// **'Gestione dati'**
   String get settingsDataSection;
 
+  /// No description provided for @settingsSubscriptionSection.
+  ///
+  /// In it, this message translates to:
+  /// **'Abbonamento'**
+  String get settingsSubscriptionSection;
+
   /// No description provided for @privacyPolicy.
   ///
   /// In it, this message translates to:
@@ -1093,6 +1099,126 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Pet Life non fornisce diagnosi mediche o veterinarie, triage, prescrizioni, terapie, dosaggi o indicazioni cliniche. Le informazioni salvate nell\'app servono solo per organizzare la vita del pet e prepararsi meglio alle visite. Per sintomi preoccupanti, dubbi sulla salute, farmaci, dosaggi o urgenze, contatta sempre il veterinario.'**
   String get medicalDisclaimerBody;
+
+  /// No description provided for @subscriptionTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Abbonamento'**
+  String get subscriptionTitle;
+
+  /// No description provided for @currentPlan.
+  ///
+  /// In it, this message translates to:
+  /// **'Piano attuale'**
+  String get currentPlan;
+
+  /// No description provided for @freePlan.
+  ///
+  /// In it, this message translates to:
+  /// **'Free'**
+  String get freePlan;
+
+  /// No description provided for @premiumPlan.
+  ///
+  /// In it, this message translates to:
+  /// **'Premium'**
+  String get premiumPlan;
+
+  /// No description provided for @premiumMonthlyPrice.
+  ///
+  /// In it, this message translates to:
+  /// **'3,99 €/mese'**
+  String get premiumMonthlyPrice;
+
+  /// No description provided for @premiumAnnualPrice.
+  ///
+  /// In it, this message translates to:
+  /// **'29,99 €/anno'**
+  String get premiumAnnualPrice;
+
+  /// No description provided for @manageSubscription.
+  ///
+  /// In it, this message translates to:
+  /// **'Gestisci abbonamento'**
+  String get manageSubscription;
+
+  /// No description provided for @viewPremium.
+  ///
+  /// In it, this message translates to:
+  /// **'Scopri Premium'**
+  String get viewPremium;
+
+  /// No description provided for @paywallTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Pet Life Premium'**
+  String get paywallTitle;
+
+  /// No description provided for @paywallSubtitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Più spazio e strumenti avanzati per organizzare meglio la vita del tuo pet.'**
+  String get paywallSubtitle;
+
+  /// No description provided for @premiumBenefitUnlimitedPets.
+  ///
+  /// In it, this message translates to:
+  /// **'Più pet e archivio organizzato'**
+  String get premiumBenefitUnlimitedPets;
+
+  /// No description provided for @premiumBenefitAdvancedReports.
+  ///
+  /// In it, this message translates to:
+  /// **'Report avanzati per preparare le visite'**
+  String get premiumBenefitAdvancedReports;
+
+  /// No description provided for @premiumBenefitDocumentArchive.
+  ///
+  /// In it, this message translates to:
+  /// **'Archivio documenti più completo'**
+  String get premiumBenefitDocumentArchive;
+
+  /// No description provided for @premiumBenefitSmartReminders.
+  ///
+  /// In it, this message translates to:
+  /// **'Promemoria intelligenti e riepiloghi'**
+  String get premiumBenefitSmartReminders;
+
+  /// No description provided for @monthlyPlan.
+  ///
+  /// In it, this message translates to:
+  /// **'Mensile'**
+  String get monthlyPlan;
+
+  /// No description provided for @annualPlan.
+  ///
+  /// In it, this message translates to:
+  /// **'Annuale'**
+  String get annualPlan;
+
+  /// No description provided for @bestValue.
+  ///
+  /// In it, this message translates to:
+  /// **'Miglior valore'**
+  String get bestValue;
+
+  /// No description provided for @storePurchasesNotEnabled.
+  ///
+  /// In it, this message translates to:
+  /// **'Gli acquisti store non sono ancora attivi in questa build.'**
+  String get storePurchasesNotEnabled;
+
+  /// No description provided for @restorePurchases.
+  ///
+  /// In it, this message translates to:
+  /// **'Ripristina acquisti'**
+  String get restorePurchases;
+
+  /// No description provided for @subscriptionDisclaimer.
+  ///
+  /// In it, this message translates to:
+  /// **'Pet Life Premium migliora organizzazione, archivio e report. Non aggiunge diagnosi, triage, prescrizioni o calcolo dosaggi.'**
+  String get subscriptionDisclaimer;
 }
 
 class _AppLocalizationsDelegate

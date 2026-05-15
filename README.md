@@ -66,12 +66,17 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 - Disclaimer medico-veterinario in-app
 - Export dati locali JSON
 - Cancellazione dati locali
+- Modello Free/Premium
+- Paywall informativo Premium
+- Pricing Premium: 3,99 €/mese e 29,99 €/anno
+- Gating Premium predisposto
+- Azioni store reali nascoste dietro feature flag
 
 ### Prossima fase
 
+- Configurazione prodotti App Store / Google Play
+- Integrazione acquisti reali e restore purchases
 - Miglioramento UX permessi notifiche
-- Paywall e subscription readiness
-- Account deletion readiness per eventuale account cloud
 - Preparazione store listing
 
 ## Comandi principali

@@ -12,6 +12,7 @@ import '../features/reminders/presentation/add_reminder_screen.dart';
 import '../features/reminders/presentation/reminders_screen.dart';
 import '../features/settings/presentation/legal_document_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
+import '../features/subscription/presentation/paywall_screen.dart';
 
 GoRouter buildAppRouter() {
   return GoRouter(
@@ -40,6 +41,10 @@ GoRouter buildAppRouter() {
 
           return LegalDocumentScreen(type: type);
         },
+      ),
+      GoRoute(
+        path: '/subscription',
+        builder: (context, state) => const PaywallScreen(),
       ),
       GoRoute(
         path: '/pets/new',

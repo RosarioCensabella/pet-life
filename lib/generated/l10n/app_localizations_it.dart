@@ -464,6 +464,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get settingsDataSection => 'Gestione dati';
 
   @override
+  String get settingsSubscriptionSection => 'Abbonamento';
+
+  @override
   String get privacyPolicy => 'Privacy Policy';
 
   @override
@@ -526,4 +529,69 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get medicalDisclaimerBody =>
       'Pet Life non fornisce diagnosi mediche o veterinarie, triage, prescrizioni, terapie, dosaggi o indicazioni cliniche. Le informazioni salvate nell\'app servono solo per organizzare la vita del pet e prepararsi meglio alle visite. Per sintomi preoccupanti, dubbi sulla salute, farmaci, dosaggi o urgenze, contatta sempre il veterinario.';
+
+  @override
+  String get subscriptionTitle => 'Abbonamento';
+
+  @override
+  String get currentPlan => 'Piano attuale';
+
+  @override
+  String get freePlan => 'Free';
+
+  @override
+  String get premiumPlan => 'Premium';
+
+  @override
+  String get premiumMonthlyPrice => '3,99 €/mese';
+
+  @override
+  String get premiumAnnualPrice => '29,99 €/anno';
+
+  @override
+  String get manageSubscription => 'Gestisci abbonamento';
+
+  @override
+  String get viewPremium => 'Scopri Premium';
+
+  @override
+  String get paywallTitle => 'Pet Life Premium';
+
+  @override
+  String get paywallSubtitle =>
+      'Più spazio e strumenti avanzati per organizzare meglio la vita del tuo pet.';
+
+  @override
+  String get premiumBenefitUnlimitedPets => 'Più pet e archivio organizzato';
+
+  @override
+  String get premiumBenefitAdvancedReports =>
+      'Report avanzati per preparare le visite';
+
+  @override
+  String get premiumBenefitDocumentArchive => 'Archivio documenti più completo';
+
+  @override
+  String get premiumBenefitSmartReminders =>
+      'Promemoria intelligenti e riepiloghi';
+
+  @override
+  String get monthlyPlan => 'Mensile';
+
+  @override
+  String get annualPlan => 'Annuale';
+
+  @override
+  String get bestValue => 'Miglior valore';
+
+  @override
+  String get storePurchasesNotEnabled =>
+      'Gli acquisti store non sono ancora attivi in questa build.';
+
+  @override
+  String get restorePurchases => 'Ripristina acquisti';
+
+  @override
+  String get subscriptionDisclaimer =>
+      'Pet Life Premium migliora organizzazione, archivio e report. Non aggiunge diagnosi, triage, prescrizioni o calcolo dosaggi.';
 }

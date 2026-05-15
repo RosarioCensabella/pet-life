@@ -3,11 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/feature_flags_provider.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../shared/presentation/pet_life_navigation_bar.dart';
 import '../../documents/application/pet_document_controller.dart';
 import '../../pets/application/pet_controller.dart';
 import '../../reminders/application/reminder_controller.dart';
+import '../../subscription/application/subscription_controller.dart';
+import '../../subscription/domain/subscription_plan.dart';
 import '../application/app_data_service_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -153,6 +156,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final featureFlags = ref.watch(featureFlagsProvider);
+    final subscriptionStatus = ref.watch(subscriptionControllerProvider);
+
+    final planLabel = subscriptionStatus.currentTier == SubscriptionTier.premium
+        ? l10n.premiumPlan
+        : l10n.freePlan;
 
     return Scaffold(
       appBar: AppBar(
@@ -161,6 +170,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 16),
         children: [
+          if (featureFlags.subscriptionModuleEnabled)
+            _SettingsSection(
+              title: l10n.settingsSubscriptionSection,
+              children: [
+                _SettingsTile(
+                  icon: Icons.workspace_premium_outlined,
+                  title: l10n.viewPremium,
+                  subtitle: '${l10n.currentPlan}: $planLabel',
+                  onTap: () => context.push('/subscription'),
+                ),
+              ],
+            ),
           _SettingsSection(
             title: l10n.settingsLegalSection,
             children: [
