@@ -10,6 +10,8 @@ import '../features/pets/presentation/edit_pet_screen.dart';
 import '../features/pets/presentation/pet_dashboard_screen.dart';
 import '../features/reminders/presentation/add_reminder_screen.dart';
 import '../features/reminders/presentation/reminders_screen.dart';
+import '../features/settings/presentation/legal_document_screen.dart';
+import '../features/settings/presentation/settings_screen.dart';
 
 GoRouter buildAppRouter() {
   return GoRouter(
@@ -26,6 +28,18 @@ GoRouter buildAppRouter() {
       GoRoute(
         path: '/calendar',
         builder: (context, state) => const CalendarScreen(),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/legal/:type',
+        builder: (context, state) {
+          final type = state.pathParameters['type'] ?? 'privacy';
+
+          return LegalDocumentScreen(type: type);
+        },
       ),
       GoRoute(
         path: '/pets/new',

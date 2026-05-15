@@ -961,6 +961,138 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Documento eliminato'**
   String get documentDeleted;
+
+  /// No description provided for @settingsTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Impostazioni'**
+  String get settingsTitle;
+
+  /// No description provided for @settingsLegalSection.
+  ///
+  /// In it, this message translates to:
+  /// **'Informazioni legali'**
+  String get settingsLegalSection;
+
+  /// No description provided for @settingsDataSection.
+  ///
+  /// In it, this message translates to:
+  /// **'Gestione dati'**
+  String get settingsDataSection;
+
+  /// No description provided for @privacyPolicy.
+  ///
+  /// In it, this message translates to:
+  /// **'Privacy Policy'**
+  String get privacyPolicy;
+
+  /// No description provided for @termsOfService.
+  ///
+  /// In it, this message translates to:
+  /// **'Termini di servizio'**
+  String get termsOfService;
+
+  /// No description provided for @medicalDisclaimerTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Disclaimer medico-veterinario'**
+  String get medicalDisclaimerTitle;
+
+  /// No description provided for @exportData.
+  ///
+  /// In it, this message translates to:
+  /// **'Esporta dati'**
+  String get exportData;
+
+  /// No description provided for @exportDataDescription.
+  ///
+  /// In it, this message translates to:
+  /// **'Crea un file JSON con dati locali, pet, promemoria e documenti.'**
+  String get exportDataDescription;
+
+  /// No description provided for @exportReadyTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Export completato'**
+  String get exportReadyTitle;
+
+  /// No description provided for @exportReadyMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Il file JSON è stato creato in questo percorso locale:'**
+  String get exportReadyMessage;
+
+  /// No description provided for @copyPath.
+  ///
+  /// In it, this message translates to:
+  /// **'Copia percorso'**
+  String get copyPath;
+
+  /// No description provided for @pathCopied.
+  ///
+  /// In it, this message translates to:
+  /// **'Percorso copiato'**
+  String get pathCopied;
+
+  /// No description provided for @deleteLocalData.
+  ///
+  /// In it, this message translates to:
+  /// **'Elimina dati locali'**
+  String get deleteLocalData;
+
+  /// No description provided for @deleteLocalDataDescription.
+  ///
+  /// In it, this message translates to:
+  /// **'Rimuove pet, promemoria, documenti e file archiviati da questo dispositivo.'**
+  String get deleteLocalDataDescription;
+
+  /// No description provided for @deleteLocalDataConfirmTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Eliminare tutti i dati locali?'**
+  String get deleteLocalDataConfirmTitle;
+
+  /// No description provided for @deleteLocalDataConfirmMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Questa azione rimuove tutti i dati salvati su questo dispositivo. Non può essere annullata.'**
+  String get deleteLocalDataConfirmMessage;
+
+  /// No description provided for @deleteAll.
+  ///
+  /// In it, this message translates to:
+  /// **'Elimina tutto'**
+  String get deleteAll;
+
+  /// No description provided for @localDataDeleted.
+  ///
+  /// In it, this message translates to:
+  /// **'Dati locali eliminati'**
+  String get localDataDeleted;
+
+  /// No description provided for @ok.
+  ///
+  /// In it, this message translates to:
+  /// **'OK'**
+  String get ok;
+
+  /// No description provided for @privacyPolicyBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Pet Life salva i dati inseriti dall\'utente principalmente sul dispositivo. I dati possono includere profili pet, promemoria, documenti locali, note e informazioni organizzative. In questa versione non viene creato un account cloud. L\'utente può esportare i dati locali in formato JSON ed eliminarli dal dispositivo dalle Impostazioni. Pet Life non vende dati personali e non usa i dati per fornire diagnosi, triage, prescrizioni o indicazioni mediche.'**
+  String get privacyPolicyBody;
+
+  /// No description provided for @termsOfServiceBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Pet Life è fornita come diario intelligente, organizzatore e archivio documenti per la cura del pet. L\'utente è responsabile dell\'accuratezza dei dati inseriti e dell\'uso delle informazioni salvate. L\'app non sostituisce il veterinario e non deve essere usata per emergenze, diagnosi, prescrizioni o decisioni cliniche. Le funzionalità di promemoria e archivio sono strumenti organizzativi.'**
+  String get termsOfServiceBody;
+
+  /// No description provided for @medicalDisclaimerBody.
+  ///
+  /// In it, this message translates to:
+  /// **'Pet Life non fornisce diagnosi mediche o veterinarie, triage, prescrizioni, terapie, dosaggi o indicazioni cliniche. Le informazioni salvate nell\'app servono solo per organizzare la vita del pet e prepararsi meglio alle visite. Per sintomi preoccupanti, dubbi sulla salute, farmaci, dosaggi o urgenze, contatta sempre il veterinario.'**
+  String get medicalDisclaimerBody;
 }
 
 class _AppLocalizationsDelegate

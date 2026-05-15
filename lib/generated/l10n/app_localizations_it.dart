@@ -453,4 +453,77 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get documentDeleted => 'Documento eliminato';
+
+  @override
+  String get settingsTitle => 'Impostazioni';
+
+  @override
+  String get settingsLegalSection => 'Informazioni legali';
+
+  @override
+  String get settingsDataSection => 'Gestione dati';
+
+  @override
+  String get privacyPolicy => 'Privacy Policy';
+
+  @override
+  String get termsOfService => 'Termini di servizio';
+
+  @override
+  String get medicalDisclaimerTitle => 'Disclaimer medico-veterinario';
+
+  @override
+  String get exportData => 'Esporta dati';
+
+  @override
+  String get exportDataDescription =>
+      'Crea un file JSON con dati locali, pet, promemoria e documenti.';
+
+  @override
+  String get exportReadyTitle => 'Export completato';
+
+  @override
+  String get exportReadyMessage =>
+      'Il file JSON è stato creato in questo percorso locale:';
+
+  @override
+  String get copyPath => 'Copia percorso';
+
+  @override
+  String get pathCopied => 'Percorso copiato';
+
+  @override
+  String get deleteLocalData => 'Elimina dati locali';
+
+  @override
+  String get deleteLocalDataDescription =>
+      'Rimuove pet, promemoria, documenti e file archiviati da questo dispositivo.';
+
+  @override
+  String get deleteLocalDataConfirmTitle => 'Eliminare tutti i dati locali?';
+
+  @override
+  String get deleteLocalDataConfirmMessage =>
+      'Questa azione rimuove tutti i dati salvati su questo dispositivo. Non può essere annullata.';
+
+  @override
+  String get deleteAll => 'Elimina tutto';
+
+  @override
+  String get localDataDeleted => 'Dati locali eliminati';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get privacyPolicyBody =>
+      'Pet Life salva i dati inseriti dall\'utente principalmente sul dispositivo. I dati possono includere profili pet, promemoria, documenti locali, note e informazioni organizzative. In questa versione non viene creato un account cloud. L\'utente può esportare i dati locali in formato JSON ed eliminarli dal dispositivo dalle Impostazioni. Pet Life non vende dati personali e non usa i dati per fornire diagnosi, triage, prescrizioni o indicazioni mediche.';
+
+  @override
+  String get termsOfServiceBody =>
+      'Pet Life è fornita come diario intelligente, organizzatore e archivio documenti per la cura del pet. L\'utente è responsabile dell\'accuratezza dei dati inseriti e dell\'uso delle informazioni salvate. L\'app non sostituisce il veterinario e non deve essere usata per emergenze, diagnosi, prescrizioni o decisioni cliniche. Le funzionalità di promemoria e archivio sono strumenti organizzativi.';
+
+  @override
+  String get medicalDisclaimerBody =>
+      'Pet Life non fornisce diagnosi mediche o veterinarie, triage, prescrizioni, terapie, dosaggi o indicazioni cliniche. Le informazioni salvate nell\'app servono solo per organizzare la vita del pet e prepararsi meglio alle visite. Per sintomi preoccupanti, dubbi sulla salute, farmaci, dosaggi o urgenze, contatta sempre il veterinario.';
 }

@@ -22,7 +22,7 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 - flutter_local_notifications per notifiche locali
 - timezone + flutter_timezone per scheduling locale
 - file_picker per selezione file
-- path_provider per archivio locale app
+- path_provider per archivio locale app ed export
 - open_filex per apertura documenti
 
 ## Stato progetto
@@ -35,7 +35,7 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 - Onboarding iniziale
 - Disclaimer no diagnosi
 - Home multi-pet
-- Bottom navigation funzionante per sezioni complete
+- Bottom navigation funzionante: Home, Calendario, Impostazioni
 - Test widget per onboarding IT/EN
 - Modello locale `Pet`
 - Form "Aggiungi pet"
@@ -60,13 +60,19 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 - Selezione file
 - Apertura documento
 - Eliminazione documento
+- Impostazioni
+- Privacy Policy in-app
+- Termini di servizio in-app
+- Disclaimer medico-veterinario in-app
+- Export dati locali JSON
+- Cancellazione dati locali
 
 ### Prossima fase
 
 - Miglioramento UX permessi notifiche
-- Data export locale
-- Impostazioni account/privacy
-- Preparazione store readiness
+- Paywall e subscription readiness
+- Account deletion readiness per eventuale account cloud
+- Preparazione store listing
 
 ## Comandi principali
 

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../generated/l10n/app_localizations.dart';
+import '../../../shared/presentation/pet_life_navigation_bar.dart';
 import '../../pets/application/pet_controller.dart';
 import '../../pets/domain/pet.dart';
 import '../../reminders/application/reminder_controller.dart';
@@ -81,7 +82,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         ),
                         statusLabel: _statusLabel(l10n, reminder.status),
                         dateLabel: _formatDate(context, reminder.scheduledAt),
-                        onTap: () => context.go(
+                        onTap: () => context.push(
                           '/pets/${reminder.petId}/reminders',
                         ),
                       ),
@@ -92,25 +93,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           );
         },
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 1,
-        onDestinationSelected: (index) {
-          if (index == 0) {
-            context.go('/home');
-          }
-        },
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home),
-            label: l10n.homeTitle,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.calendar_month_outlined),
-            selectedIcon: const Icon(Icons.calendar_month),
-            label: l10n.calendar,
-          ),
-        ],
+      bottomNavigationBar: const PetLifeNavigationBar(
+        selectedDestination: PetLifeDestination.calendar,
       ),
     );
   }

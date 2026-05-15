@@ -452,4 +452,77 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get documentDeleted => 'Document deleted';
+
+  @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get settingsLegalSection => 'Legal information';
+
+  @override
+  String get settingsDataSection => 'Data management';
+
+  @override
+  String get privacyPolicy => 'Privacy Policy';
+
+  @override
+  String get termsOfService => 'Terms of Service';
+
+  @override
+  String get medicalDisclaimerTitle => 'Medical-veterinary disclaimer';
+
+  @override
+  String get exportData => 'Export data';
+
+  @override
+  String get exportDataDescription =>
+      'Create a JSON file with local data, pets, reminders and documents.';
+
+  @override
+  String get exportReadyTitle => 'Export complete';
+
+  @override
+  String get exportReadyMessage =>
+      'The JSON file was created at this local path:';
+
+  @override
+  String get copyPath => 'Copy path';
+
+  @override
+  String get pathCopied => 'Path copied';
+
+  @override
+  String get deleteLocalData => 'Delete local data';
+
+  @override
+  String get deleteLocalDataDescription =>
+      'Removes pets, reminders, documents and archived files from this device.';
+
+  @override
+  String get deleteLocalDataConfirmTitle => 'Delete all local data?';
+
+  @override
+  String get deleteLocalDataConfirmMessage =>
+      'This action removes all data saved on this device. It cannot be undone.';
+
+  @override
+  String get deleteAll => 'Delete all';
+
+  @override
+  String get localDataDeleted => 'Local data deleted';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get privacyPolicyBody =>
+      'Pet Life stores user-entered data mainly on the device. Data may include pet profiles, reminders, local documents, notes and organizational information. This version does not create a cloud account. The user can export local data as JSON and delete it from the device in Settings. Pet Life does not sell personal data and does not use data to provide diagnoses, triage, prescriptions or medical advice.';
+
+  @override
+  String get termsOfServiceBody =>
+      'Pet Life is provided as an intelligent diary, organizer and document archive for pet care. The user is responsible for the accuracy of the data entered and how saved information is used. The app does not replace a veterinarian and must not be used for emergencies, diagnoses, prescriptions or clinical decisions. Reminder and archive features are organizational tools.';
+
+  @override
+  String get medicalDisclaimerBody =>
+      'Pet Life does not provide medical or veterinary diagnoses, triage, prescriptions, treatments, dosages or clinical advice. Information saved in the app is only used to organize the pet’s life and prepare better for visits. For concerning symptoms, health doubts, medications, dosages or emergencies, always contact your veterinarian.';
 }

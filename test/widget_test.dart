@@ -9,6 +9,9 @@ import 'package:pet_life/core/notifications/reminder_notification_scheduler_prov
 import 'package:pet_life/features/documents/application/document_file_service.dart';
 import 'package:pet_life/features/documents/application/document_file_service_provider.dart';
 import 'package:pet_life/features/reminders/domain/reminder.dart';
+import 'package:pet_life/features/settings/application/app_data_service.dart';
+import 'package:pet_life/features/settings/application/app_data_service_provider.dart';
+import 'package:pet_life/features/settings/domain/app_data_export_result.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -57,6 +60,9 @@ void main() {
           ),
           documentFileServiceProvider.overrideWithValue(
             FakeDocumentFileService(),
+          ),
+          appDataServiceProvider.overrideWith(
+            (ref) async => FakeAppDataService(),
           ),
         ],
         child: const PetLifeApp(
@@ -248,6 +254,84 @@ void main() {
     expect(fakeDocumentFileService.deletedPaths, isNotEmpty);
   });
 
+  testWidgets('Settings shows legal documents', (
+    tester,
+  ) async {
+    await _setLargeTestViewport(tester);
+    await _pumpPetLifeApp(tester);
+
+    await tester.tap(find.text('Accetta e continua'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Impostazioni').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Informazioni legali'), findsOneWidget);
+    expect(find.text('Privacy Policy'), findsOneWidget);
+    expect(find.text('Termini di servizio'), findsOneWidget);
+    expect(find.text('Disclaimer medico-veterinario'), findsOneWidget);
+
+    await tester.tap(find.text('Privacy Policy'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Pet Life salva i dati'), findsOneWidget);
+  });
+
+  testWidgets('Settings can export data', (
+    tester,
+  ) async {
+    final fakeAppDataService = FakeAppDataService();
+
+    await _setLargeTestViewport(tester);
+    await _pumpPetLifeApp(
+      tester,
+      appDataService: fakeAppDataService,
+    );
+
+    await tester.tap(find.text('Accetta e continua'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Impostazioni').first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Esporta dati'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Export completato'), findsOneWidget);
+    expect(find.textContaining('pet_life_export.json'), findsOneWidget);
+    expect(fakeAppDataService.exportCalled, isTrue);
+  });
+
+  testWidgets('Settings can delete local data', (
+    tester,
+  ) async {
+    final fakeAppDataService = FakeAppDataService();
+
+    await _setLargeTestViewport(tester);
+    _seedPetWithUpcomingReminder();
+
+    await _openHome(
+      tester,
+      appDataService: fakeAppDataService,
+    );
+
+    expect(find.text('Luna'), findsOneWidget);
+
+    await tester.tap(find.text('Impostazioni').first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Elimina dati locali'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Eliminare tutti i dati locali?'), findsOneWidget);
+
+    await tester.tap(find.text('Elimina tutto'));
+    await tester.pumpAndSettle();
+
+    expect(fakeAppDataService.clearCalled, isTrue);
+    expect(find.text('Aggiungi il tuo primo animale'), findsOneWidget);
+  });
+
   testWidgets('User can postpone and skip reminders', (
     tester,
   ) async {
@@ -381,6 +465,7 @@ Future<void> _setLargeTestViewport(WidgetTester tester) async {
 Future<void> _pumpPetLifeApp(
   WidgetTester tester, {
   DocumentFileService? documentFileService,
+  AppDataService? appDataService,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -390,6 +475,9 @@ Future<void> _pumpPetLifeApp(
         ),
         documentFileServiceProvider.overrideWithValue(
           documentFileService ?? FakeDocumentFileService(),
+        ),
+        appDataServiceProvider.overrideWith(
+          (ref) async => appDataService ?? FakeAppDataService(),
         ),
       ],
       child: const PetLifeApp(
@@ -401,8 +489,14 @@ Future<void> _pumpPetLifeApp(
   await tester.pumpAndSettle();
 }
 
-Future<void> _openHome(WidgetTester tester) async {
-  await _pumpPetLifeApp(tester);
+Future<void> _openHome(
+  WidgetTester tester, {
+  AppDataService? appDataService,
+}) async {
+  await _pumpPetLifeApp(
+    tester,
+    appDataService: appDataService,
+  );
 
   await tester.tap(find.text('Accetta e continua'));
   await tester.pumpAndSettle();
@@ -483,5 +577,32 @@ class FakeDocumentFileService implements DocumentFileService {
   @override
   Future<void> deleteDocument(String localPath) async {
     deletedPaths.add(localPath);
+  }
+}
+
+class FakeAppDataService implements AppDataService {
+  bool exportCalled = false;
+  bool clearCalled = false;
+
+  @override
+  Future<AppDataExportResult> exportLocalData() async {
+    exportCalled = true;
+
+    return AppDataExportResult(
+      filePath: 'fake/path/pet_life_export.json',
+      jsonContent: '{"pets":[]}',
+      exportedAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<void> clearLocalData() async {
+    clearCalled = true;
+
+    final preferences = await SharedPreferences.getInstance();
+
+    await preferences.remove('pet_life_pets_v1');
+    await preferences.remove('pet_life_reminders_v1');
+    await preferences.remove('pet_life_documents_v1');
   }
 }
