@@ -43,14 +43,35 @@ class PetController extends StateNotifier<AsyncValue<List<Pet>>> {
     final currentPets = state.valueOrNull ?? const <Pet>[];
     final updatedPets = [...currentPets, pet];
 
-    state = AsyncValue.data(updatedPets);
+    await _saveAndEmit(updatedPets);
+  }
 
-    try {
-      final storage = await _ref.read(petLocalStorageProvider.future);
-      await storage.savePets(updatedPets);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    }
+  Future<void> updatePet(Pet updatedPet) async {
+    final currentPets = state.valueOrNull ?? const <Pet>[];
+
+    final updatedPets = currentPets.map((pet) {
+      if (pet.id == updatedPet.id) {
+        return updatedPet;
+      }
+
+      return pet;
+    }).toList(growable: false);
+
+    await _saveAndEmit(updatedPets);
+  }
+
+  Future<void> archivePet(String petId) async {
+    final currentPets = state.valueOrNull ?? const <Pet>[];
+
+    final updatedPets = currentPets.map((pet) {
+      if (pet.id == petId) {
+        return pet.copyWith(archivedAt: DateTime.now());
+      }
+
+      return pet;
+    }).toList(growable: false);
+
+    await _saveAndEmit(updatedPets);
   }
 
   Pet? findById(String petId) {
@@ -63,5 +84,16 @@ class PetController extends StateNotifier<AsyncValue<List<Pet>>> {
     }
 
     return null;
+  }
+
+  Future<void> _saveAndEmit(List<Pet> pets) async {
+    state = AsyncValue.data(pets);
+
+    try {
+      final storage = await _ref.read(petLocalStorageProvider.future);
+      await storage.savePets(pets);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+    }
   }
 }

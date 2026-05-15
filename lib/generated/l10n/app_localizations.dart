@@ -332,6 +332,12 @@ abstract class AppLocalizations {
   /// **'Pet salvato'**
   String get petSaved;
 
+  /// No description provided for @petUpdated.
+  ///
+  /// In it, this message translates to:
+  /// **'Pet aggiornato'**
+  String get petUpdated;
+
   /// No description provided for @loadingPets.
   ///
   /// In it, this message translates to:
@@ -362,18 +368,6 @@ abstract class AppLocalizations {
   /// **'Dati principali del pet salvati localmente su questo dispositivo.'**
   String get petProfileDescription;
 
-  /// No description provided for @petCareModulesHiddenTitle.
-  ///
-  /// In it, this message translates to:
-  /// **'Moduli cura pet'**
-  String get petCareModulesHiddenTitle;
-
-  /// No description provided for @petCareModulesHiddenDescription.
-  ///
-  /// In it, this message translates to:
-  /// **'Promemoria, documenti, diario salute, visite, spese, assicurazione e report saranno attivati solo quando completi e testati.'**
-  String get petCareModulesHiddenDescription;
-
   /// No description provided for @backToHome.
   ///
   /// In it, this message translates to:
@@ -391,6 +385,84 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Riprova'**
   String get retry;
+
+  /// No description provided for @editPet.
+  ///
+  /// In it, this message translates to:
+  /// **'Modifica pet'**
+  String get editPet;
+
+  /// No description provided for @archivePet.
+  ///
+  /// In it, this message translates to:
+  /// **'Archivia pet'**
+  String get archivePet;
+
+  /// No description provided for @archivePetConfirmTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Archiviare questo pet?'**
+  String get archivePetConfirmTitle;
+
+  /// No description provided for @archivePetConfirmMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Il pet non sarà più visibile nella Home e i promemoria futuri verranno disattivati nelle prossime fasi. I dati restano conservati per consultazione ed export.'**
+  String get archivePetConfirmMessage;
+
+  /// No description provided for @cancel.
+  ///
+  /// In it, this message translates to:
+  /// **'Annulla'**
+  String get cancel;
+
+  /// No description provided for @archive.
+  ///
+  /// In it, this message translates to:
+  /// **'Archivia'**
+  String get archive;
+
+  /// No description provided for @petArchived.
+  ///
+  /// In it, this message translates to:
+  /// **'Pet archiviato'**
+  String get petArchived;
+
+  /// No description provided for @activeProfile.
+  ///
+  /// In it, this message translates to:
+  /// **'Profilo attivo'**
+  String get activeProfile;
+
+  /// No description provided for @archivedProfile.
+  ///
+  /// In it, this message translates to:
+  /// **'Profilo archiviato'**
+  String get archivedProfile;
+
+  /// No description provided for @petActions.
+  ///
+  /// In it, this message translates to:
+  /// **'Azioni profilo'**
+  String get petActions;
+
+  /// No description provided for @petActionsDescription.
+  ///
+  /// In it, this message translates to:
+  /// **'Puoi aggiornare i dati principali del pet o archiviarlo se non vuoi più vederlo nella Home.'**
+  String get petActionsDescription;
+
+  /// No description provided for @noActivePetsTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun pet attivo'**
+  String get noActivePetsTitle;
+
+  /// No description provided for @noActivePetsDescription.
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiungi un pet per iniziare a organizzare informazioni, documenti e promemoria.'**
+  String get noActivePetsDescription;
 }
 
 class _AppLocalizationsDelegate

@@ -12,15 +12,8 @@ void main() {
   testWidgets('Pet Life shows Italian onboarding disclaimer and navigates to home', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: PetLifeApp(
-          locale: Locale('it'),
-        ),
-      ),
-    );
-
-    await tester.pumpAndSettle();
+    await _setLargeTestViewport(tester);
+    await _pumpPetLifeApp(tester);
 
     expect(
       find.text('Tutta la vita del tuo pet, ordinata in un solo posto.'),
@@ -47,6 +40,8 @@ void main() {
   testWidgets('Pet Life supports English onboarding copy', (
     tester,
   ) async {
+    await _setLargeTestViewport(tester);
+
     await tester.pumpWidget(
       const ProviderScope(
         child: PetLifeApp(
@@ -76,18 +71,8 @@ void main() {
   testWidgets('User can add a pet and see it in Home', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: PetLifeApp(
-          locale: Locale('it'),
-        ),
-      ),
-    );
-
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Accetta e continua'));
-    await tester.pumpAndSettle();
+    await _setLargeTestViewport(tester);
+    await _openHome(tester);
 
     await tester.tap(find.text('Aggiungi pet'));
     await tester.pumpAndSettle();
@@ -98,14 +83,110 @@ void main() {
     await tester.enterText(find.byType(TextFormField).at(1), '3');
     await tester.enterText(find.byType(TextFormField).at(2), 'Europeo');
 
-    await tester.ensureVisible(find.text('Salva pet'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Salva pet'));
-    await tester.pumpAndSettle();
+    await _tapSavePet(tester);
 
     expect(find.text('I tuoi animali'), findsWidgets);
     expect(find.text('Luna'), findsOneWidget);
     expect(find.textContaining('Europeo'), findsOneWidget);
   });
+
+  testWidgets('User can edit a pet profile', (
+    tester,
+  ) async {
+    await _setLargeTestViewport(tester);
+    await _createPet(tester);
+
+    await tester.tap(find.text('Luna'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Modifica pet'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Modifica pet'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'Milo');
+    await tester.enterText(find.byType(TextFormField).at(1), '4');
+
+    await _tapSavePet(tester);
+
+    expect(find.text('Milo'), findsWidgets);
+    expect(find.textContaining('4 anni'), findsOneWidget);
+  });
+
+  testWidgets('User can archive a pet and hide it from Home', (
+    tester,
+  ) async {
+    await _setLargeTestViewport(tester);
+    await _createPet(tester);
+
+    await tester.tap(find.text('Luna'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Archivia pet'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Archivia pet'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Archiviare questo pet?'), findsOneWidget);
+
+    await tester.tap(find.text('Archivia'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('I tuoi animali'), findsWidgets);
+    expect(find.text('Luna'), findsNothing);
+    expect(find.text('Aggiungi il tuo primo animale'), findsOneWidget);
+  });
+}
+
+Future<void> _setLargeTestViewport(WidgetTester tester) async {
+  await tester.binding.setSurfaceSize(const Size(900, 1200));
+  addTearDown(() async {
+    await tester.binding.setSurfaceSize(null);
+  });
+}
+
+Future<void> _pumpPetLifeApp(WidgetTester tester) async {
+  await tester.pumpWidget(
+    const ProviderScope(
+      child: PetLifeApp(
+        locale: Locale('it'),
+      ),
+    ),
+  );
+
+  await tester.pumpAndSettle();
+}
+
+Future<void> _openHome(WidgetTester tester) async {
+  await _pumpPetLifeApp(tester);
+
+  await tester.tap(find.text('Accetta e continua'));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _createPet(WidgetTester tester) async {
+  await _openHome(tester);
+
+  await tester.tap(find.text('Aggiungi pet'));
+  await tester.pumpAndSettle();
+
+  await tester.enterText(find.byType(TextFormField).at(0), 'Luna');
+  await tester.enterText(find.byType(TextFormField).at(1), '3');
+  await tester.enterText(find.byType(TextFormField).at(2), 'Europeo');
+
+  await _tapSavePet(tester);
+
+  expect(find.text('Luna'), findsOneWidget);
+}
+
+Future<void> _tapSavePet(WidgetTester tester) async {
+  final saveButton = find.widgetWithText(FilledButton, 'Salva pet');
+
+  await tester.ensureVisible(saveButton);
+  await tester.pumpAndSettle();
+
+  await tester.tap(saveButton);
+  await tester.pumpAndSettle();
 }

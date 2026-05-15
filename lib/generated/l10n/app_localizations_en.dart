@@ -128,6 +128,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get petSaved => 'Pet saved';
 
   @override
+  String get petUpdated => 'Pet updated';
+
+  @override
   String get loadingPets => 'Loading pets...';
 
   @override
@@ -144,13 +147,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Main pet details saved locally on this device.';
 
   @override
-  String get petCareModulesHiddenTitle => 'Pet care modules';
-
-  @override
-  String get petCareModulesHiddenDescription =>
-      'Reminders, documents, health diary, visits, expenses, insurance and reports will be enabled only when complete and tested.';
-
-  @override
   String get backToHome => 'Back to Home';
 
   @override
@@ -158,4 +154,46 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get retry => 'Retry';
+
+  @override
+  String get editPet => 'Edit pet';
+
+  @override
+  String get archivePet => 'Archive pet';
+
+  @override
+  String get archivePetConfirmTitle => 'Archive this pet?';
+
+  @override
+  String get archivePetConfirmMessage =>
+      'The pet will no longer be visible on Home and future reminders will be disabled in upcoming phases. Data remains stored for consultation and export.';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get archive => 'Archive';
+
+  @override
+  String get petArchived => 'Pet archived';
+
+  @override
+  String get activeProfile => 'Active profile';
+
+  @override
+  String get archivedProfile => 'Archived profile';
+
+  @override
+  String get petActions => 'Profile actions';
+
+  @override
+  String get petActionsDescription =>
+      'You can update the pet’s main details or archive it if you no longer want to see it on Home.';
+
+  @override
+  String get noActivePetsTitle => 'No active pets';
+
+  @override
+  String get noActivePetsDescription =>
+      'Add a pet to start organizing information, documents and reminders.';
 }

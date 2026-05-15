@@ -32,16 +32,20 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
         data: (pets) {
+          final activePets = pets
+              .where((pet) => !pet.isArchived)
+              .toList(growable: false);
+
           return ListView(
             padding: const EdgeInsets.symmetric(vertical: 16),
             children: [
-              if (pets.isEmpty)
+              if (activePets.isEmpty)
                 _EmptyPetsCard(
                   title: l10n.addFirstPetTitle,
                   description: l10n.addFirstPetDescription,
                 )
               else
-                ...pets.map(
+                ...activePets.map(
                   (pet) => _PetCard(
                     pet: pet,
                     speciesLabel: _speciesLabel(l10n, pet.species),

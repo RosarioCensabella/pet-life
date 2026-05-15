@@ -37,13 +37,14 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 - Persistenza locale dei pet
 - Home con lista animali
 - Dashboard profilo pet
+- Modifica profilo pet
+- Archiviazione pet
 
 ### Prossima fase
 
-- Editing profilo pet
-- Archiviazione pet
-- Struttura dashboard modulare con feature flag
-- Preparazione repository remoto Firebase
+- Dashboard modulare del pet
+- Feature flag per moduli
+- Primo modulo completo: promemoria locali
 
 ## Comandi principali
 

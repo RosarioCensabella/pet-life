@@ -21,6 +21,7 @@ class Pet {
     this.sex = PetSex.unknown,
     this.microchip,
     this.vetName,
+    this.archivedAt,
   });
 
   final String id;
@@ -32,6 +33,38 @@ class Pet {
   final PetSex sex;
   final String? microchip;
   final String? vetName;
+  final DateTime? archivedAt;
+
+  bool get isArchived => archivedAt != null;
+
+  Pet copyWith({
+    String? id,
+    String? name,
+    PetSpecies? species,
+    int? estimatedAgeYears,
+    DateTime? createdAt,
+    String? breed,
+    PetSex? sex,
+    String? microchip,
+    String? vetName,
+    DateTime? archivedAt,
+    bool clearBreed = false,
+    bool clearMicrochip = false,
+    bool clearVetName = false,
+  }) {
+    return Pet(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      species: species ?? this.species,
+      estimatedAgeYears: estimatedAgeYears ?? this.estimatedAgeYears,
+      createdAt: createdAt ?? this.createdAt,
+      breed: clearBreed ? null : breed ?? this.breed,
+      sex: sex ?? this.sex,
+      microchip: clearMicrochip ? null : microchip ?? this.microchip,
+      vetName: clearVetName ? null : vetName ?? this.vetName,
+      archivedAt: archivedAt ?? this.archivedAt,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -44,10 +77,13 @@ class Pet {
       'sex': sex.name,
       'microchip': microchip,
       'vetName': vetName,
+      'archivedAt': archivedAt?.toIso8601String(),
     };
   }
 
   factory Pet.fromJson(Map<String, dynamic> json) {
+    final archivedAtRaw = json['archivedAt'] as String?;
+
     return Pet(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -58,6 +94,7 @@ class Pet {
       sex: PetSex.values.byName((json['sex'] as String?) ?? PetSex.unknown.name),
       microchip: json['microchip'] as String?,
       vetName: json['vetName'] as String?,
+      archivedAt: archivedAtRaw == null ? null : DateTime.parse(archivedAtRaw),
     );
   }
 }

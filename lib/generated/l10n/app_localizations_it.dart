@@ -129,6 +129,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get petSaved => 'Pet salvato';
 
   @override
+  String get petUpdated => 'Pet aggiornato';
+
+  @override
   String get loadingPets => 'Caricamento animali...';
 
   @override
@@ -145,13 +148,6 @@ class AppLocalizationsIt extends AppLocalizations {
       'Dati principali del pet salvati localmente su questo dispositivo.';
 
   @override
-  String get petCareModulesHiddenTitle => 'Moduli cura pet';
-
-  @override
-  String get petCareModulesHiddenDescription =>
-      'Promemoria, documenti, diario salute, visite, spese, assicurazione e report saranno attivati solo quando completi e testati.';
-
-  @override
   String get backToHome => 'Torna alla Home';
 
   @override
@@ -159,4 +155,46 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get retry => 'Riprova';
+
+  @override
+  String get editPet => 'Modifica pet';
+
+  @override
+  String get archivePet => 'Archivia pet';
+
+  @override
+  String get archivePetConfirmTitle => 'Archiviare questo pet?';
+
+  @override
+  String get archivePetConfirmMessage =>
+      'Il pet non sarà più visibile nella Home e i promemoria futuri verranno disattivati nelle prossime fasi. I dati restano conservati per consultazione ed export.';
+
+  @override
+  String get cancel => 'Annulla';
+
+  @override
+  String get archive => 'Archivia';
+
+  @override
+  String get petArchived => 'Pet archiviato';
+
+  @override
+  String get activeProfile => 'Profilo attivo';
+
+  @override
+  String get archivedProfile => 'Profilo archiviato';
+
+  @override
+  String get petActions => 'Azioni profilo';
+
+  @override
+  String get petActionsDescription =>
+      'Puoi aggiornare i dati principali del pet o archiviarlo se non vuoi più vederlo nella Home.';
+
+  @override
+  String get noActivePetsTitle => 'Nessun pet attivo';
+
+  @override
+  String get noActivePetsDescription =>
+      'Aggiungi un pet per iniziare a organizzare informazioni, documenti e promemoria.';
 }
