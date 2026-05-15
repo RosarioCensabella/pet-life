@@ -18,6 +18,7 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 - go_router
 - ARB localization IT/EN
 - Material 3
+- shared_preferences per persistenza locale iniziale
 
 ## Stato progetto
 
@@ -31,13 +32,18 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 - Home vuota multi-pet
 - Bottom navigation base
 - Test widget per onboarding IT/EN
+- Modello locale `Pet`
+- Form "Aggiungi pet"
+- Persistenza locale dei pet
+- Home con lista animali
+- Dashboard profilo pet
 
 ### Prossima fase
 
-- Modello dati locale `Pet`
-- Form completo "Aggiungi pet"
-- Home con lista animali
-- Dashboard singolo pet
+- Editing profilo pet
+- Archiviazione pet
+- Struttura dashboard modulare con feature flag
+- Preparazione repository remoto Firebase
 
 ## Comandi principali
 

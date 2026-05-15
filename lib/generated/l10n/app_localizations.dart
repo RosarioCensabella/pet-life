@@ -175,6 +175,222 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Prossimo step: creazione profilo pet'**
   String get nextStepCreatePet;
+
+  /// No description provided for @addPetTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiungi pet'**
+  String get addPetTitle;
+
+  /// No description provided for @editPetTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Modifica pet'**
+  String get editPetTitle;
+
+  /// No description provided for @petNameLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Nome'**
+  String get petNameLabel;
+
+  /// No description provided for @petNameHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Es. Luna'**
+  String get petNameHint;
+
+  /// No description provided for @petNameRequired.
+  ///
+  /// In it, this message translates to:
+  /// **'Inserisci il nome del pet'**
+  String get petNameRequired;
+
+  /// No description provided for @speciesLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Specie'**
+  String get speciesLabel;
+
+  /// No description provided for @speciesDog.
+  ///
+  /// In it, this message translates to:
+  /// **'Cane'**
+  String get speciesDog;
+
+  /// No description provided for @speciesCat.
+  ///
+  /// In it, this message translates to:
+  /// **'Gatto'**
+  String get speciesCat;
+
+  /// No description provided for @speciesOther.
+  ///
+  /// In it, this message translates to:
+  /// **'Altro animale'**
+  String get speciesOther;
+
+  /// No description provided for @estimatedAgeLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Età stimata'**
+  String get estimatedAgeLabel;
+
+  /// No description provided for @estimatedAgeHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Es. 3'**
+  String get estimatedAgeHint;
+
+  /// No description provided for @estimatedAgeRequired.
+  ///
+  /// In it, this message translates to:
+  /// **'Inserisci l\'età stimata'**
+  String get estimatedAgeRequired;
+
+  /// No description provided for @estimatedAgeInvalid.
+  ///
+  /// In it, this message translates to:
+  /// **'Inserisci un numero valido'**
+  String get estimatedAgeInvalid;
+
+  /// No description provided for @yearsSuffix.
+  ///
+  /// In it, this message translates to:
+  /// **'anni'**
+  String get yearsSuffix;
+
+  /// No description provided for @breedLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Razza'**
+  String get breedLabel;
+
+  /// No description provided for @breedHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Opzionale'**
+  String get breedHint;
+
+  /// No description provided for @sexLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Sesso'**
+  String get sexLabel;
+
+  /// No description provided for @sexUnknown.
+  ///
+  /// In it, this message translates to:
+  /// **'Non specificato'**
+  String get sexUnknown;
+
+  /// No description provided for @sexFemale.
+  ///
+  /// In it, this message translates to:
+  /// **'Femmina'**
+  String get sexFemale;
+
+  /// No description provided for @sexMale.
+  ///
+  /// In it, this message translates to:
+  /// **'Maschio'**
+  String get sexMale;
+
+  /// No description provided for @microchipLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Microchip'**
+  String get microchipLabel;
+
+  /// No description provided for @microchipHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Opzionale'**
+  String get microchipHint;
+
+  /// No description provided for @vetNameLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Veterinario'**
+  String get vetNameLabel;
+
+  /// No description provided for @vetNameHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Opzionale'**
+  String get vetNameHint;
+
+  /// No description provided for @savePet.
+  ///
+  /// In it, this message translates to:
+  /// **'Salva pet'**
+  String get savePet;
+
+  /// No description provided for @petSaved.
+  ///
+  /// In it, this message translates to:
+  /// **'Pet salvato'**
+  String get petSaved;
+
+  /// No description provided for @loadingPets.
+  ///
+  /// In it, this message translates to:
+  /// **'Caricamento animali...'**
+  String get loadingPets;
+
+  /// No description provided for @openPetDashboard.
+  ///
+  /// In it, this message translates to:
+  /// **'Apri dashboard'**
+  String get openPetDashboard;
+
+  /// No description provided for @petDashboardTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Dashboard pet'**
+  String get petDashboardTitle;
+
+  /// No description provided for @petProfileSection.
+  ///
+  /// In it, this message translates to:
+  /// **'Profilo'**
+  String get petProfileSection;
+
+  /// No description provided for @petProfileDescription.
+  ///
+  /// In it, this message translates to:
+  /// **'Dati principali del pet salvati localmente su questo dispositivo.'**
+  String get petProfileDescription;
+
+  /// No description provided for @petCareModulesHiddenTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Moduli cura pet'**
+  String get petCareModulesHiddenTitle;
+
+  /// No description provided for @petCareModulesHiddenDescription.
+  ///
+  /// In it, this message translates to:
+  /// **'Promemoria, documenti, diario salute, visite, spese, assicurazione e report saranno attivati solo quando completi e testati.'**
+  String get petCareModulesHiddenDescription;
+
+  /// No description provided for @backToHome.
+  ///
+  /// In it, this message translates to:
+  /// **'Torna alla Home'**
+  String get backToHome;
+
+  /// No description provided for @petNotFound.
+  ///
+  /// In it, this message translates to:
+  /// **'Pet non trovato'**
+  String get petNotFound;
+
+  /// No description provided for @retry.
+  ///
+  /// In it, this message translates to:
+  /// **'Riprova'**
+  String get retry;
 }
 
 class _AppLocalizationsDelegate
