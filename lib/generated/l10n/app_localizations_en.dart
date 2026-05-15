@@ -343,4 +343,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reminderSkipped => 'Reminder skipped';
+
+  @override
+  String get upcomingRemindersTitle => 'Upcoming due dates';
+
+  @override
+  String get noUpcomingReminders => 'No upcoming due dates';
+
+  @override
+  String get calendarTitle => 'Calendar';
+
+  @override
+  String get calendarEmptyTitle => 'No due dates in calendar';
+
+  @override
+  String get calendarEmptyDescription =>
+      'Create a reminder from a pet profile to see it here.';
+
+  @override
+  String get allPets => 'All pets';
+
+  @override
+  String get filterByPet => 'Filter by pet';
 }

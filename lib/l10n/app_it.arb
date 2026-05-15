@@ -112,5 +112,13 @@
   "skipReminder": "Salta",
   "reminderCompleted": "Promemoria completato",
   "reminderPostponed": "Promemoria rimandato",
-  "reminderSkipped": "Promemoria saltato"
+  "reminderSkipped": "Promemoria saltato",
+
+  "upcomingRemindersTitle": "Prossime scadenze",
+  "noUpcomingReminders": "Nessuna scadenza futura",
+  "calendarTitle": "Calendario",
+  "calendarEmptyTitle": "Nessuna scadenza in calendario",
+  "calendarEmptyDescription": "Crea un promemoria dal profilo di un pet per visualizzarlo qui.",
+  "allPets": "Tutti i pet",
+  "filterByPet": "Filtra per pet"
 }

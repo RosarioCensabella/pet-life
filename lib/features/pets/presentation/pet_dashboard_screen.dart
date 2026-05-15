@@ -103,7 +103,7 @@ class PetDashboardScreen extends ConsumerWidget {
           icon: Icons.badge_outlined,
           title: l10n.moduleProfileTitle,
           description: l10n.moduleProfileDescription,
-          onTap: () => context.go('/pets/${pet.id}/edit'),
+          onTap: () => context.push('/pets/${pet.id}/edit'),
         ),
       );
     }
@@ -114,7 +114,7 @@ class PetDashboardScreen extends ConsumerWidget {
           icon: Icons.notifications_active_outlined,
           title: l10n.moduleRemindersTitle,
           description: l10n.moduleRemindersDescription,
-          onTap: () => context.go('/pets/${pet.id}/reminders'),
+          onTap: () => context.push('/pets/${pet.id}/reminders'),
         ),
       );
     }

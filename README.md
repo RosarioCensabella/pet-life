@@ -1,3 +1,5 @@
+# Pet Life
+
 Pet Life è una app B2C multilingua per proprietari di cani, gatti e altri animali domestici.
 
 L'app è posizionata come diario intelligente, organizzatore, archivio documenti e assistente per la cura del pet.
@@ -29,8 +31,8 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 - Localizzazione IT/EN
 - Onboarding iniziale
 - Disclaimer no diagnosi
-- Home vuota multi-pet
-- Bottom navigation base
+- Home multi-pet
+- Bottom navigation funzionante per sezioni complete
 - Test widget per onboarding IT/EN
 - Modello locale `Pet`
 - Form "Aggiungi pet"
@@ -47,12 +49,15 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 - Stati promemoria: attivo, completato, rimandato, saltato
 - Notifiche locali per promemoria
 - Modulo Promemoria visibile nella dashboard
+- Home con prossime scadenze
+- Calendario globale cross-pet
+- Filtro calendario per pet
 
 ### Prossima fase
 
-- Calendario globale cross-pet
-- Widget prossime scadenze in Home
 - Miglioramento UX permessi notifiche
+- Preparazione modulo Documenti
+- Upload locale foto/PDF
 
 ## Comandi principali
 
@@ -60,6 +65,7 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 flutter gen-l10n
 flutter analyze
 flutter test
+flutter build apk --debug
 flutter run
 Regole prodotto non negoziabili
 Nessuna diagnosi medica

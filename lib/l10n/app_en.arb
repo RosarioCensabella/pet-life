@@ -112,5 +112,13 @@
   "skipReminder": "Skip",
   "reminderCompleted": "Reminder completed",
   "reminderPostponed": "Reminder postponed",
-  "reminderSkipped": "Reminder skipped"
+  "reminderSkipped": "Reminder skipped",
+
+  "upcomingRemindersTitle": "Upcoming due dates",
+  "noUpcomingReminders": "No upcoming due dates",
+  "calendarTitle": "Calendar",
+  "calendarEmptyTitle": "No due dates in calendar",
+  "calendarEmptyDescription": "Create a reminder from a pet profile to see it here.",
+  "allPets": "All pets",
+  "filterByPet": "Filter by pet"
 }

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -150,6 +152,28 @@ void main() {
     expect(find.text('Completato'), findsOneWidget);
   });
 
+  testWidgets('Home and calendar show upcoming reminders', (
+    tester,
+  ) async {
+    await _setLargeTestViewport(tester);
+    _seedPetWithUpcomingReminder();
+
+    await _openHome(tester);
+
+    expect(find.text('I tuoi animali'), findsWidgets);
+    expect(find.text('Prossime scadenze'), findsOneWidget);
+    expect(find.text('Vaccino annuale'), findsOneWidget);
+
+    await tester.tap(find.text('Calendario').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Calendario'), findsWidgets);
+    expect(find.text('Filtra per pet'), findsOneWidget);
+    expect(find.text('Tutti i pet'), findsOneWidget);
+    expect(find.text('Vaccino annuale'), findsOneWidget);
+    expect(find.text('Luna'), findsWidgets);
+  });
+
   testWidgets('User can postpone and skip reminders', (
     tester,
   ) async {
@@ -228,6 +252,48 @@ void main() {
     expect(find.text('I tuoi animali'), findsWidgets);
     expect(find.text('Luna'), findsNothing);
     expect(find.text('Aggiungi il tuo primo animale'), findsOneWidget);
+  });
+}
+
+void _seedPetWithUpcomingReminder() {
+  final now = DateTime.now();
+  final createdAt = now.subtract(const Duration(days: 1));
+  final scheduledAt = now.add(const Duration(days: 1));
+
+  final petsJson = jsonEncode([
+    {
+      'id': 'pet-1',
+      'name': 'Luna',
+      'species': 'dog',
+      'estimatedAgeYears': 3,
+      'createdAt': createdAt.toIso8601String(),
+      'breed': 'Europeo',
+      'sex': 'unknown',
+      'microchip': null,
+      'vetName': null,
+      'archivedAt': null,
+    }
+  ]);
+
+  final remindersJson = jsonEncode([
+    {
+      'id': 'reminder-1',
+      'petId': 'pet-1',
+      'petName': 'Luna',
+      'category': 'vaccine',
+      'title': 'Vaccino annuale',
+      'scheduledAt': scheduledAt.toIso8601String(),
+      'status': 'active',
+      'createdAt': createdAt.toIso8601String(),
+      'notes': null,
+      'completedAt': null,
+      'updatedAt': null,
+    }
+  ]);
+
+  SharedPreferences.setMockInitialValues({
+    'pet_life_pets_v1': petsJson,
+    'pet_life_reminders_v1': remindersJson,
   });
 }
 

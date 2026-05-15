@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import '../features/calendar/presentation/calendar_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/pets/presentation/add_pet_screen.dart';
@@ -19,6 +20,10 @@ GoRouter buildAppRouter() {
       GoRoute(
         path: '/home',
         builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: '/calendar',
+        builder: (context, state) => const CalendarScreen(),
       ),
       GoRoute(
         path: '/pets/new',

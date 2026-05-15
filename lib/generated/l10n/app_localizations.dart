@@ -751,6 +751,48 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Promemoria saltato'**
   String get reminderSkipped;
+
+  /// No description provided for @upcomingRemindersTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Prossime scadenze'**
+  String get upcomingRemindersTitle;
+
+  /// No description provided for @noUpcomingReminders.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna scadenza futura'**
+  String get noUpcomingReminders;
+
+  /// No description provided for @calendarTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Calendario'**
+  String get calendarTitle;
+
+  /// No description provided for @calendarEmptyTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna scadenza in calendario'**
+  String get calendarEmptyTitle;
+
+  /// No description provided for @calendarEmptyDescription.
+  ///
+  /// In it, this message translates to:
+  /// **'Crea un promemoria dal profilo di un pet per visualizzarlo qui.'**
+  String get calendarEmptyDescription;
+
+  /// No description provided for @allPets.
+  ///
+  /// In it, this message translates to:
+  /// **'Tutti i pet'**
+  String get allPets;
+
+  /// No description provided for @filterByPet.
+  ///
+  /// In it, this message translates to:
+  /// **'Filtra per pet'**
+  String get filterByPet;
 }
 
 class _AppLocalizationsDelegate

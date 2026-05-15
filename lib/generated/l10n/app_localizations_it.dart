@@ -344,4 +344,26 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get reminderSkipped => 'Promemoria saltato';
+
+  @override
+  String get upcomingRemindersTitle => 'Prossime scadenze';
+
+  @override
+  String get noUpcomingReminders => 'Nessuna scadenza futura';
+
+  @override
+  String get calendarTitle => 'Calendario';
+
+  @override
+  String get calendarEmptyTitle => 'Nessuna scadenza in calendario';
+
+  @override
+  String get calendarEmptyDescription =>
+      'Crea un promemoria dal profilo di un pet per visualizzarlo qui.';
+
+  @override
+  String get allPets => 'Tutti i pet';
+
+  @override
+  String get filterByPet => 'Filtra per pet';
 }

@@ -45,7 +45,7 @@ class RemindersScreen extends ConsumerWidget {
               title: l10n.noRemindersTitle,
               description: l10n.noRemindersDescription,
               buttonLabel: l10n.addReminder,
-              onPressed: () => context.go('/pets/$petId/reminders/new'),
+              onPressed: () => context.push('/pets/$petId/reminders/new'),
             );
           }
 
@@ -69,7 +69,7 @@ class RemindersScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: FilledButton.icon(
-                  onPressed: () => context.go('/pets/$petId/reminders/new'),
+                  onPressed: () => context.push('/pets/$petId/reminders/new'),
                   icon: const Icon(Icons.add),
                   label: Text(l10n.addReminder),
                 ),
@@ -79,7 +79,7 @@ class RemindersScreen extends ConsumerWidget {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('/pets/$petId/reminders/new'),
+        onPressed: () => context.push('/pets/$petId/reminders/new'),
         icon: const Icon(Icons.add),
         label: Text(l10n.addReminder),
       ),

@@ -119,7 +119,11 @@ class _AddReminderScreenState extends ConsumerState<AddReminderScreen> {
       SnackBar(content: Text(l10n.reminderSaved)),
     );
 
-    context.go('/pets/${widget.petId}/reminders');
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/pets/${widget.petId}/reminders');
+    }
   }
 
   String? _optionalText(String value) {
