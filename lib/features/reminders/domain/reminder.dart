@@ -20,6 +20,7 @@ class Reminder {
   const Reminder({
     required this.id,
     required this.petId,
+    required this.petName,
     required this.category,
     required this.title,
     required this.scheduledAt,
@@ -32,6 +33,7 @@ class Reminder {
 
   final String id;
   final String petId;
+  final String petName;
   final ReminderCategory category;
   final String title;
   final DateTime scheduledAt;
@@ -44,6 +46,7 @@ class Reminder {
   Reminder copyWith({
     String? id,
     String? petId,
+    String? petName,
     ReminderCategory? category,
     String? title,
     DateTime? scheduledAt,
@@ -58,6 +61,7 @@ class Reminder {
     return Reminder(
       id: id ?? this.id,
       petId: petId ?? this.petId,
+      petName: petName ?? this.petName,
       category: category ?? this.category,
       title: title ?? this.title,
       scheduledAt: scheduledAt ?? this.scheduledAt,
@@ -73,6 +77,7 @@ class Reminder {
     return {
       'id': id,
       'petId': petId,
+      'petName': petName,
       'category': category.name,
       'title': title,
       'scheduledAt': scheduledAt.toIso8601String(),
@@ -91,6 +96,7 @@ class Reminder {
     return Reminder(
       id: json['id'] as String,
       petId: json['petId'] as String,
+      petName: (json['petName'] as String?) ?? 'Pet',
       category: ReminderCategory.values.byName(json['category'] as String),
       title: json['title'] as String,
       scheduledAt: DateTime.parse(json['scheduledAt'] as String),

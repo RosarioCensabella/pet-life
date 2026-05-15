@@ -1,5 +1,3 @@
-# Pet Life
-
 Pet Life è una app B2C multilingua per proprietari di cani, gatti e altri animali domestici.
 
 L'app è posizionata come diario intelligente, organizzatore, archivio documenti e assistente per la cura del pet.
@@ -19,6 +17,8 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 - ARB localization IT/EN
 - Material 3
 - shared_preferences per persistenza locale iniziale
+- flutter_local_notifications per notifiche locali
+- timezone + flutter_timezone per scheduling locale
 
 ## Stato progetto
 
@@ -45,12 +45,14 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 - Storage locale promemoria
 - Creazione promemoria
 - Stati promemoria: attivo, completato, rimandato, saltato
+- Notifiche locali per promemoria
+- Modulo Promemoria visibile nella dashboard
 
 ### Prossima fase
 
-- Notifiche locali
-- Permessi notifiche
-- Attivazione modulo Promemoria nella dashboard
+- Calendario globale cross-pet
+- Widget prossime scadenze in Home
+- Miglioramento UX permessi notifiche
 
 ## Comandi principali
 

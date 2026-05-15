@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../generated/l10n/app_localizations.dart';
+import '../../pets/application/pet_controller.dart';
 import '../application/reminder_controller.dart';
 import '../domain/reminder.dart';
 
@@ -90,9 +91,16 @@ class _AddReminderScreenState extends ConsumerState<AddReminderScreen> {
       _selectedTime.minute,
     );
 
+    final petName = ref
+            .read(petControllerProvider.notifier)
+            .findById(widget.petId)
+            ?.name ??
+        'Pet';
+
     final reminder = Reminder(
       id: const Uuid().v4(),
       petId: widget.petId,
+      petName: petName,
       category: _category,
       title: _titleController.text.trim(),
       scheduledAt: scheduledAt,

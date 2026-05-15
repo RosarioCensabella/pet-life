@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/notifications/reminder_notification_scheduler_provider.dart';
 import '../../pets/application/pet_controller.dart';
 import '../data/reminder_local_storage.dart';
 import '../domain/reminder.dart';
@@ -51,10 +52,15 @@ class ReminderController extends StateNotifier<AsyncValue<List<Reminder>>> {
     final updatedReminders = [...currentReminders, reminder];
 
     await _saveAndEmit(updatedReminders);
+
+    await _ref.read(reminderNotificationSchedulerProvider).scheduleReminder(
+          reminder: reminder,
+        );
   }
 
   Future<void> completeReminder(String reminderId) async {
     final now = DateTime.now();
+
     final updatedReminders = _mapReminder(
       reminderId,
       (reminder) => reminder.copyWith(
@@ -65,10 +71,14 @@ class ReminderController extends StateNotifier<AsyncValue<List<Reminder>>> {
     );
 
     await _saveAndEmit(updatedReminders);
+    await _ref.read(reminderNotificationSchedulerProvider).cancelReminder(
+          reminderId,
+        );
   }
 
   Future<void> postponeReminderByOneDay(String reminderId) async {
     final now = DateTime.now();
+
     final updatedReminders = _mapReminder(
       reminderId,
       (reminder) => reminder.copyWith(
@@ -80,10 +90,19 @@ class ReminderController extends StateNotifier<AsyncValue<List<Reminder>>> {
     );
 
     await _saveAndEmit(updatedReminders);
+
+    final updatedReminder = _findReminder(reminderId);
+
+    if (updatedReminder != null) {
+      await _ref.read(reminderNotificationSchedulerProvider).scheduleReminder(
+            reminder: updatedReminder,
+          );
+    }
   }
 
   Future<void> skipReminder(String reminderId) async {
     final now = DateTime.now();
+
     final updatedReminders = _mapReminder(
       reminderId,
       (reminder) => reminder.copyWith(
@@ -94,6 +113,21 @@ class ReminderController extends StateNotifier<AsyncValue<List<Reminder>>> {
     );
 
     await _saveAndEmit(updatedReminders);
+    await _ref.read(reminderNotificationSchedulerProvider).cancelReminder(
+          reminderId,
+        );
+  }
+
+  Reminder? _findReminder(String reminderId) {
+    final reminders = state.valueOrNull ?? const <Reminder>[];
+
+    for (final reminder in reminders) {
+      if (reminder.id == reminderId) {
+        return reminder;
+      }
+    }
+
+    return null;
   }
 
   List<Reminder> _mapReminder(

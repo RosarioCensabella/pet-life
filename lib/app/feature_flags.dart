@@ -30,7 +30,7 @@ class FeatureFlags {
 
 const defaultFeatureFlags = FeatureFlags(
   petProfileModuleEnabled: true,
-  remindersModuleEnabled: false,
+  remindersModuleEnabled: true,
   documentsModuleEnabled: false,
   healthDiaryModuleEnabled: false,
   weightModuleEnabled: false,
