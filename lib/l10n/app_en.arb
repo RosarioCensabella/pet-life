@@ -1,0 +1,16 @@
+{
+  "@@locale": "en",
+  "appName": "Pet Life",
+  "homeTitle": "Your pets",
+  "addPet": "Add pet",
+  "welcomeTitle": "Your pet’s life, organized in one place.",
+  "medicalDisclaimer": "Pet Life helps organize information and reminders. It does not provide diagnoses, treatments, prescriptions, or medical advice. For concerning or persistent symptoms, contact your veterinarian.",
+  "acceptAndContinue": "Accept and continue",
+  "settings": "Settings",
+  "calendar": "Calendar",
+  "documents": "Documents",
+  "reports": "Reports",
+  "addFirstPetTitle": "Add your first pet",
+  "addFirstPetDescription": "Create your pet profile to start organizing reminders, documents, health diary and vet visits.",
+  "nextStepCreatePet": "Next step: pet profile creation"
+}

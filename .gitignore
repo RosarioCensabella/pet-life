@@ -1,0 +1,77 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history/
+.svn/
+migrate_working_dir/
+
+# IntelliJ / Android Studio
+*.iml
+*.ipr
+*.iws
+.idea/
+.gradle/
+local.properties
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+coverage/
+
+# Generated localization files are intentionally committed only if generated into lib/
+# In this project, lib/generated/l10n is committed because l10n.yaml uses output-dir.
+
+# Android build outputs
+android/app/build/
+android/build/
+android/.gradle/
+
+# iOS build outputs
+ios/Flutter/Flutter.framework
+ios/Flutter/App.framework
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Runner/GeneratedPluginRegistrant.*
+ios/Pods/
+ios/.symlinks/
+ios/build/
+ios/Runner.xcworkspace/xcuserdata/
+ios/Runner.xcodeproj/xcuserdata/
+
+# Windows build outputs
+windows/flutter/ephemeral/
+windows/build/
+
+# Sensitive files
+.env
+.env.*
+*.keystore
+*.jks
+*.p8
+*.p12
+*.mobileprovision
+*.cer
+*.pem
+*.key
+service-account*.json
+firebase-service-account*.json
+
+# Store / subscription credentials
+revenuecat_private_key*
+apple_api_key*
+play_store_service_account*.json
