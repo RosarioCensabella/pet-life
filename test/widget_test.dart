@@ -90,7 +90,7 @@ void main() {
     expect(find.textContaining('Europeo'), findsOneWidget);
   });
 
-  testWidgets('User can edit a pet profile', (
+  testWidgets('Dashboard shows only enabled complete modules', (
     tester,
   ) async {
     await _setLargeTestViewport(tester);
@@ -99,10 +99,24 @@ void main() {
     await tester.tap(find.text('Luna'));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Modifica pet'));
+    expect(find.text('Cosa vuoi fare?'), findsOneWidget);
+    expect(find.text('Profilo'), findsOneWidget);
+    expect(find.text('Promemoria'), findsNothing);
+    expect(find.text('Documenti'), findsNothing);
+    expect(find.text('Diario salute'), findsNothing);
+    expect(find.text('Farmaci'), findsNothing);
+  });
+
+  testWidgets('User can edit a pet profile through profile module', (
+    tester,
+  ) async {
+    await _setLargeTestViewport(tester);
+    await _createPet(tester);
+
+    await tester.tap(find.text('Luna'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Modifica pet'));
+    await tester.tap(find.text('Profilo'));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).at(0), 'Milo');

@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/feature_flags.dart';
+import '../../../app/feature_flags_provider.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../application/pet_controller.dart';
 import '../domain/pet.dart';
+import 'widgets/pet_module_grid.dart';
 
 class PetDashboardScreen extends ConsumerWidget {
   const PetDashboardScreen({
@@ -18,6 +21,7 @@ class PetDashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final petsState = ref.watch(petControllerProvider);
+    final featureFlags = ref.watch(featureFlagsProvider);
 
     return petsState.when(
       loading: () => Scaffold(
@@ -58,15 +62,19 @@ class PetDashboardScreen extends ConsumerWidget {
                 statusLabel:
                     pet.isArchived ? l10n.archivedProfile : l10n.activeProfile,
               ),
-              _InfoCard(
-                icon: Icons.badge_outlined,
-                title: l10n.petProfileSection,
-                description: l10n.petProfileDescription,
-              ),
+              if (!pet.isArchived)
+                PetModuleGrid(
+                  title: l10n.petDashboardChooseAction,
+                  modules: _buildEnabledModules(
+                    context: context,
+                    l10n: l10n,
+                    pet: pet,
+                    featureFlags: featureFlags,
+                  ),
+                ),
               if (!pet.isArchived)
                 _PetActionsCard(
                   l10n: l10n,
-                  onEdit: () => context.go('/pets/${pet.id}/edit'),
                   onArchive: () => _confirmArchivePet(
                     context: context,
                     ref: ref,
@@ -79,6 +87,149 @@ class PetDashboardScreen extends ConsumerWidget {
         );
       },
     );
+  }
+
+  List<PetModuleItem> _buildEnabledModules({
+    required BuildContext context,
+    required AppLocalizations l10n,
+    required Pet pet,
+    required FeatureFlags featureFlags,
+  }) {
+    final modules = <PetModuleItem>[];
+
+    if (featureFlags.petProfileModuleEnabled) {
+      modules.add(
+        PetModuleItem(
+          icon: Icons.badge_outlined,
+          title: l10n.moduleProfileTitle,
+          description: l10n.moduleProfileDescription,
+          onTap: () => context.go('/pets/${pet.id}/edit'),
+        ),
+      );
+    }
+
+    if (featureFlags.remindersModuleEnabled) {
+      modules.add(
+        PetModuleItem(
+          icon: Icons.notifications_active_outlined,
+          title: l10n.moduleRemindersTitle,
+          description: '',
+          onTap: () {},
+        ),
+      );
+    }
+
+    if (featureFlags.documentsModuleEnabled) {
+      modules.add(
+        PetModuleItem(
+          icon: Icons.folder_outlined,
+          title: l10n.moduleDocumentsTitle,
+          description: '',
+          onTap: () {},
+        ),
+      );
+    }
+
+    if (featureFlags.healthDiaryModuleEnabled) {
+      modules.add(
+        PetModuleItem(
+          icon: Icons.edit_note_outlined,
+          title: l10n.moduleHealthDiaryTitle,
+          description: '',
+          onTap: () {},
+        ),
+      );
+    }
+
+    if (featureFlags.weightModuleEnabled) {
+      modules.add(
+        PetModuleItem(
+          icon: Icons.monitor_weight_outlined,
+          title: l10n.moduleWeightTitle,
+          description: '',
+          onTap: () {},
+        ),
+      );
+    }
+
+    if (featureFlags.foodModuleEnabled) {
+      modules.add(
+        PetModuleItem(
+          icon: Icons.restaurant_outlined,
+          title: l10n.moduleFoodTitle,
+          description: '',
+          onTap: () {},
+        ),
+      );
+    }
+
+    if (featureFlags.symptomsModuleEnabled) {
+      modules.add(
+        PetModuleItem(
+          icon: Icons.visibility_outlined,
+          title: l10n.moduleSymptomsTitle,
+          description: '',
+          onTap: () {},
+        ),
+      );
+    }
+
+    if (featureFlags.medicationsModuleEnabled) {
+      modules.add(
+        PetModuleItem(
+          icon: Icons.medication_outlined,
+          title: l10n.moduleMedicationsTitle,
+          description: '',
+          onTap: () {},
+        ),
+      );
+    }
+
+    if (featureFlags.visitsModuleEnabled) {
+      modules.add(
+        PetModuleItem(
+          icon: Icons.local_hospital_outlined,
+          title: l10n.moduleVisitsTitle,
+          description: '',
+          onTap: () {},
+        ),
+      );
+    }
+
+    if (featureFlags.expensesModuleEnabled) {
+      modules.add(
+        PetModuleItem(
+          icon: Icons.receipt_long_outlined,
+          title: l10n.moduleExpensesTitle,
+          description: '',
+          onTap: () {},
+        ),
+      );
+    }
+
+    if (featureFlags.insuranceModuleEnabled) {
+      modules.add(
+        PetModuleItem(
+          icon: Icons.verified_user_outlined,
+          title: l10n.moduleInsuranceTitle,
+          description: '',
+          onTap: () {},
+        ),
+      );
+    }
+
+    if (featureFlags.reportsModuleEnabled) {
+      modules.add(
+        PetModuleItem(
+          icon: Icons.picture_as_pdf_outlined,
+          title: l10n.moduleReportsTitle,
+          description: '',
+          onTap: () {},
+        ),
+      );
+    }
+
+    return modules;
   }
 
   Future<void> _confirmArchivePet({
@@ -252,12 +403,10 @@ class _PetHeaderCard extends StatelessWidget {
 class _PetActionsCard extends StatelessWidget {
   const _PetActionsCard({
     required this.l10n,
-    required this.onEdit,
     required this.onArchive,
   });
 
   final AppLocalizations l10n;
-  final VoidCallback onEdit;
   final VoidCallback onArchive;
 
   @override
@@ -265,93 +414,10 @@ class _PetActionsCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.tune_outlined,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.petActions,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(l10n.petActionsDescription),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: onEdit,
-              icon: const Icon(Icons.edit_outlined),
-              label: Text(l10n.editPet),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: onArchive,
-              icon: const Icon(Icons.archive_outlined),
-              label: Text(l10n.archivePet),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({
-    required this.icon,
-    required this.title,
-    required this.description,
-  });
-
-  final IconData icon;
-  final String title;
-  final String description;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              icon,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(description),
-                ],
-              ),
-            ),
-          ],
+        child: OutlinedButton.icon(
+          onPressed: onArchive,
+          icon: const Icon(Icons.archive_outlined),
+          label: Text(l10n.archivePet),
         ),
       ),
     );

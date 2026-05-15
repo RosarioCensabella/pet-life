@@ -62,5 +62,20 @@
   "petActions": "Profile actions",
   "petActionsDescription": "You can update the pet’s main details or archive it if you no longer want to see it on Home.",
   "noActivePetsTitle": "No active pets",
-  "noActivePetsDescription": "Add a pet to start organizing information, documents and reminders."
+  "noActivePetsDescription": "Add a pet to start organizing information, documents and reminders.",
+
+  "petDashboardChooseAction": "What would you like to do?",
+  "moduleProfileTitle": "Profile",
+  "moduleProfileDescription": "Edit details, species, age, microchip and veterinarian.",
+  "moduleRemindersTitle": "Reminders",
+  "moduleDocumentsTitle": "Documents",
+  "moduleHealthDiaryTitle": "Health diary",
+  "moduleWeightTitle": "Weight",
+  "moduleFoodTitle": "Food",
+  "moduleSymptomsTitle": "Symptoms",
+  "moduleMedicationsTitle": "Medications",
+  "moduleVisitsTitle": "Visits",
+  "moduleExpensesTitle": "Expenses",
+  "moduleInsuranceTitle": "Insurance",
+  "moduleReportsTitle": "Reports"
 }

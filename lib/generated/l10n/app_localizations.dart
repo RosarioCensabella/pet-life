@@ -463,6 +463,90 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Aggiungi un pet per iniziare a organizzare informazioni, documenti e promemoria.'**
   String get noActivePetsDescription;
+
+  /// No description provided for @petDashboardChooseAction.
+  ///
+  /// In it, this message translates to:
+  /// **'Cosa vuoi fare?'**
+  String get petDashboardChooseAction;
+
+  /// No description provided for @moduleProfileTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Profilo'**
+  String get moduleProfileTitle;
+
+  /// No description provided for @moduleProfileDescription.
+  ///
+  /// In it, this message translates to:
+  /// **'Modifica dati, specie, età, microchip e veterinario.'**
+  String get moduleProfileDescription;
+
+  /// No description provided for @moduleRemindersTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Promemoria'**
+  String get moduleRemindersTitle;
+
+  /// No description provided for @moduleDocumentsTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Documenti'**
+  String get moduleDocumentsTitle;
+
+  /// No description provided for @moduleHealthDiaryTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Diario salute'**
+  String get moduleHealthDiaryTitle;
+
+  /// No description provided for @moduleWeightTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Peso'**
+  String get moduleWeightTitle;
+
+  /// No description provided for @moduleFoodTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Alimentazione'**
+  String get moduleFoodTitle;
+
+  /// No description provided for @moduleSymptomsTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Sintomi'**
+  String get moduleSymptomsTitle;
+
+  /// No description provided for @moduleMedicationsTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Farmaci'**
+  String get moduleMedicationsTitle;
+
+  /// No description provided for @moduleVisitsTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Visite'**
+  String get moduleVisitsTitle;
+
+  /// No description provided for @moduleExpensesTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Spese'**
+  String get moduleExpensesTitle;
+
+  /// No description provided for @moduleInsuranceTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Assicurazione'**
+  String get moduleInsuranceTitle;
+
+  /// No description provided for @moduleReportsTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Report'**
+  String get moduleReportsTitle;
 }
 
 class _AppLocalizationsDelegate

@@ -197,4 +197,47 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get noActivePetsDescription =>
       'Aggiungi un pet per iniziare a organizzare informazioni, documenti e promemoria.';
+
+  @override
+  String get petDashboardChooseAction => 'Cosa vuoi fare?';
+
+  @override
+  String get moduleProfileTitle => 'Profilo';
+
+  @override
+  String get moduleProfileDescription =>
+      'Modifica dati, specie, età, microchip e veterinario.';
+
+  @override
+  String get moduleRemindersTitle => 'Promemoria';
+
+  @override
+  String get moduleDocumentsTitle => 'Documenti';
+
+  @override
+  String get moduleHealthDiaryTitle => 'Diario salute';
+
+  @override
+  String get moduleWeightTitle => 'Peso';
+
+  @override
+  String get moduleFoodTitle => 'Alimentazione';
+
+  @override
+  String get moduleSymptomsTitle => 'Sintomi';
+
+  @override
+  String get moduleMedicationsTitle => 'Farmaci';
+
+  @override
+  String get moduleVisitsTitle => 'Visite';
+
+  @override
+  String get moduleExpensesTitle => 'Spese';
+
+  @override
+  String get moduleInsuranceTitle => 'Assicurazione';
+
+  @override
+  String get moduleReportsTitle => 'Report';
 }

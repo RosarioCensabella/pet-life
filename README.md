@@ -39,12 +39,14 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 - Dashboard profilo pet
 - Modifica profilo pet
 - Archiviazione pet
+- Feature flag centralizzati
+- Dashboard modulare del pet con solo moduli completi visibili
 
 ### Prossima fase
 
-- Dashboard modulare del pet
-- Feature flag per moduli
 - Primo modulo completo: promemoria locali
+- Notifiche locali
+- Stati promemoria: attivo, completato, rimandato, saltato
 
 ## Comandi principali
 

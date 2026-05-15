@@ -62,5 +62,20 @@
   "petActions": "Azioni profilo",
   "petActionsDescription": "Puoi aggiornare i dati principali del pet o archiviarlo se non vuoi più vederlo nella Home.",
   "noActivePetsTitle": "Nessun pet attivo",
-  "noActivePetsDescription": "Aggiungi un pet per iniziare a organizzare informazioni, documenti e promemoria."
+  "noActivePetsDescription": "Aggiungi un pet per iniziare a organizzare informazioni, documenti e promemoria.",
+
+  "petDashboardChooseAction": "Cosa vuoi fare?",
+  "moduleProfileTitle": "Profilo",
+  "moduleProfileDescription": "Modifica dati, specie, età, microchip e veterinario.",
+  "moduleRemindersTitle": "Promemoria",
+  "moduleDocumentsTitle": "Documenti",
+  "moduleHealthDiaryTitle": "Diario salute",
+  "moduleWeightTitle": "Peso",
+  "moduleFoodTitle": "Alimentazione",
+  "moduleSymptomsTitle": "Sintomi",
+  "moduleMedicationsTitle": "Farmaci",
+  "moduleVisitsTitle": "Visite",
+  "moduleExpensesTitle": "Spese",
+  "moduleInsuranceTitle": "Assicurazione",
+  "moduleReportsTitle": "Report"
 }
