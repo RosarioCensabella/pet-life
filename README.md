@@ -41,12 +41,16 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 - Archiviazione pet
 - Feature flag centralizzati
 - Dashboard modulare del pet con solo moduli completi visibili
+- Modello locale `Reminder`
+- Storage locale promemoria
+- Creazione promemoria
+- Stati promemoria: attivo, completato, rimandato, saltato
 
 ### Prossima fase
 
-- Primo modulo completo: promemoria locali
 - Notifiche locali
-- Stati promemoria: attivo, completato, rimandato, saltato
+- Permessi notifiche
+- Attivazione modulo Promemoria nella dashboard
 
 ## Comandi principali
 

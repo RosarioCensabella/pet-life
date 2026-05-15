@@ -211,6 +211,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get moduleRemindersTitle => 'Reminders';
 
   @override
+  String get moduleRemindersDescription =>
+      'Manage due dates and recurring pet care tasks.';
+
+  @override
   String get moduleDocumentsTitle => 'Documents';
 
   @override
@@ -239,4 +243,104 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get moduleReportsTitle => 'Reports';
+
+  @override
+  String get remindersTitle => 'Reminders';
+
+  @override
+  String get addReminder => 'Add reminder';
+
+  @override
+  String get addReminderTitle => 'New reminder';
+
+  @override
+  String get reminderTitleLabel => 'Title';
+
+  @override
+  String get reminderTitleHint => 'E.g. Annual vaccine';
+
+  @override
+  String get reminderTitleRequired => 'Enter a title';
+
+  @override
+  String get reminderCategoryLabel => 'Category';
+
+  @override
+  String get reminderDateLabel => 'Date';
+
+  @override
+  String get reminderTimeLabel => 'Time';
+
+  @override
+  String get reminderNotesLabel => 'Notes';
+
+  @override
+  String get reminderNotesHint => 'Optional';
+
+  @override
+  String get saveReminder => 'Save reminder';
+
+  @override
+  String get reminderSaved => 'Reminder saved';
+
+  @override
+  String get noRemindersTitle => 'No reminders';
+
+  @override
+  String get noRemindersDescription =>
+      'Add a due date to remember visits, vaccines, antiparasitics, medications or pet care tasks.';
+
+  @override
+  String get reminderCategoryVaccine => 'Vaccine';
+
+  @override
+  String get reminderCategoryAntiparasitic => 'Antiparasitic';
+
+  @override
+  String get reminderCategoryVetVisit => 'Vet visit';
+
+  @override
+  String get reminderCategoryCheckup => 'Checkup';
+
+  @override
+  String get reminderCategoryMedication => 'Medication';
+
+  @override
+  String get reminderCategoryInsurance => 'Insurance';
+
+  @override
+  String get reminderCategoryGrooming => 'Grooming';
+
+  @override
+  String get reminderCategoryCustom => 'Custom';
+
+  @override
+  String get reminderStatusActive => 'Active';
+
+  @override
+  String get reminderStatusCompleted => 'Completed';
+
+  @override
+  String get reminderStatusPostponed => 'Postponed';
+
+  @override
+  String get reminderStatusSkipped => 'Skipped';
+
+  @override
+  String get completeReminder => 'Complete';
+
+  @override
+  String get postponeReminder => 'Postpone 1 day';
+
+  @override
+  String get skipReminder => 'Skip';
+
+  @override
+  String get reminderCompleted => 'Reminder completed';
+
+  @override
+  String get reminderPostponed => 'Reminder postponed';
+
+  @override
+  String get reminderSkipped => 'Reminder skipped';
 }

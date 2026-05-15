@@ -5,6 +5,8 @@ import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/pets/presentation/add_pet_screen.dart';
 import '../features/pets/presentation/edit_pet_screen.dart';
 import '../features/pets/presentation/pet_dashboard_screen.dart';
+import '../features/reminders/presentation/add_reminder_screen.dart';
+import '../features/reminders/presentation/reminders_screen.dart';
 
 GoRouter buildAppRouter() {
   return GoRouter(
@@ -36,6 +38,22 @@ GoRouter buildAppRouter() {
           final petId = state.pathParameters['petId']!;
 
           return EditPetScreen(petId: petId);
+        },
+      ),
+      GoRoute(
+        path: '/pets/:petId/reminders',
+        builder: (context, state) {
+          final petId = state.pathParameters['petId']!;
+
+          return RemindersScreen(petId: petId);
+        },
+      ),
+      GoRoute(
+        path: '/pets/:petId/reminders/new',
+        builder: (context, state) {
+          final petId = state.pathParameters['petId']!;
+
+          return AddReminderScreen(petId: petId);
         },
       ),
     ],

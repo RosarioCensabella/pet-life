@@ -488,6 +488,12 @@ abstract class AppLocalizations {
   /// **'Promemoria'**
   String get moduleRemindersTitle;
 
+  /// No description provided for @moduleRemindersDescription.
+  ///
+  /// In it, this message translates to:
+  /// **'Gestisci scadenze e attività ricorrenti del pet.'**
+  String get moduleRemindersDescription;
+
   /// No description provided for @moduleDocumentsTitle.
   ///
   /// In it, this message translates to:
@@ -547,6 +553,204 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Report'**
   String get moduleReportsTitle;
+
+  /// No description provided for @remindersTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Promemoria'**
+  String get remindersTitle;
+
+  /// No description provided for @addReminder.
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiungi promemoria'**
+  String get addReminder;
+
+  /// No description provided for @addReminderTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Nuovo promemoria'**
+  String get addReminderTitle;
+
+  /// No description provided for @reminderTitleLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Titolo'**
+  String get reminderTitleLabel;
+
+  /// No description provided for @reminderTitleHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Es. Vaccino annuale'**
+  String get reminderTitleHint;
+
+  /// No description provided for @reminderTitleRequired.
+  ///
+  /// In it, this message translates to:
+  /// **'Inserisci un titolo'**
+  String get reminderTitleRequired;
+
+  /// No description provided for @reminderCategoryLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Categoria'**
+  String get reminderCategoryLabel;
+
+  /// No description provided for @reminderDateLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Data'**
+  String get reminderDateLabel;
+
+  /// No description provided for @reminderTimeLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Ora'**
+  String get reminderTimeLabel;
+
+  /// No description provided for @reminderNotesLabel.
+  ///
+  /// In it, this message translates to:
+  /// **'Note'**
+  String get reminderNotesLabel;
+
+  /// No description provided for @reminderNotesHint.
+  ///
+  /// In it, this message translates to:
+  /// **'Opzionale'**
+  String get reminderNotesHint;
+
+  /// No description provided for @saveReminder.
+  ///
+  /// In it, this message translates to:
+  /// **'Salva promemoria'**
+  String get saveReminder;
+
+  /// No description provided for @reminderSaved.
+  ///
+  /// In it, this message translates to:
+  /// **'Promemoria salvato'**
+  String get reminderSaved;
+
+  /// No description provided for @noRemindersTitle.
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun promemoria'**
+  String get noRemindersTitle;
+
+  /// No description provided for @noRemindersDescription.
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiungi una scadenza per ricordare visite, vaccini, antiparassitari, farmaci o attività del pet.'**
+  String get noRemindersDescription;
+
+  /// No description provided for @reminderCategoryVaccine.
+  ///
+  /// In it, this message translates to:
+  /// **'Vaccino'**
+  String get reminderCategoryVaccine;
+
+  /// No description provided for @reminderCategoryAntiparasitic.
+  ///
+  /// In it, this message translates to:
+  /// **'Antiparassitario'**
+  String get reminderCategoryAntiparasitic;
+
+  /// No description provided for @reminderCategoryVetVisit.
+  ///
+  /// In it, this message translates to:
+  /// **'Visita veterinaria'**
+  String get reminderCategoryVetVisit;
+
+  /// No description provided for @reminderCategoryCheckup.
+  ///
+  /// In it, this message translates to:
+  /// **'Controllo'**
+  String get reminderCategoryCheckup;
+
+  /// No description provided for @reminderCategoryMedication.
+  ///
+  /// In it, this message translates to:
+  /// **'Farmaco'**
+  String get reminderCategoryMedication;
+
+  /// No description provided for @reminderCategoryInsurance.
+  ///
+  /// In it, this message translates to:
+  /// **'Assicurazione'**
+  String get reminderCategoryInsurance;
+
+  /// No description provided for @reminderCategoryGrooming.
+  ///
+  /// In it, this message translates to:
+  /// **'Toelettatura'**
+  String get reminderCategoryGrooming;
+
+  /// No description provided for @reminderCategoryCustom.
+  ///
+  /// In it, this message translates to:
+  /// **'Personalizzato'**
+  String get reminderCategoryCustom;
+
+  /// No description provided for @reminderStatusActive.
+  ///
+  /// In it, this message translates to:
+  /// **'Attivo'**
+  String get reminderStatusActive;
+
+  /// No description provided for @reminderStatusCompleted.
+  ///
+  /// In it, this message translates to:
+  /// **'Completato'**
+  String get reminderStatusCompleted;
+
+  /// No description provided for @reminderStatusPostponed.
+  ///
+  /// In it, this message translates to:
+  /// **'Rimandato'**
+  String get reminderStatusPostponed;
+
+  /// No description provided for @reminderStatusSkipped.
+  ///
+  /// In it, this message translates to:
+  /// **'Saltato'**
+  String get reminderStatusSkipped;
+
+  /// No description provided for @completeReminder.
+  ///
+  /// In it, this message translates to:
+  /// **'Completa'**
+  String get completeReminder;
+
+  /// No description provided for @postponeReminder.
+  ///
+  /// In it, this message translates to:
+  /// **'Rimanda 1 giorno'**
+  String get postponeReminder;
+
+  /// No description provided for @skipReminder.
+  ///
+  /// In it, this message translates to:
+  /// **'Salta'**
+  String get skipReminder;
+
+  /// No description provided for @reminderCompleted.
+  ///
+  /// In it, this message translates to:
+  /// **'Promemoria completato'**
+  String get reminderCompleted;
+
+  /// No description provided for @reminderPostponed.
+  ///
+  /// In it, this message translates to:
+  /// **'Promemoria rimandato'**
+  String get reminderPostponed;
+
+  /// No description provided for @reminderSkipped.
+  ///
+  /// In it, this message translates to:
+  /// **'Promemoria saltato'**
+  String get reminderSkipped;
 }
 
 class _AppLocalizationsDelegate

@@ -113,8 +113,8 @@ class PetDashboardScreen extends ConsumerWidget {
         PetModuleItem(
           icon: Icons.notifications_active_outlined,
           title: l10n.moduleRemindersTitle,
-          description: '',
-          onTap: () {},
+          description: l10n.moduleRemindersDescription,
+          onTap: () => context.go('/pets/${pet.id}/reminders'),
         ),
       );
     }

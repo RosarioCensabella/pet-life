@@ -212,6 +212,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get moduleRemindersTitle => 'Promemoria';
 
   @override
+  String get moduleRemindersDescription =>
+      'Gestisci scadenze e attività ricorrenti del pet.';
+
+  @override
   String get moduleDocumentsTitle => 'Documenti';
 
   @override
@@ -240,4 +244,104 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get moduleReportsTitle => 'Report';
+
+  @override
+  String get remindersTitle => 'Promemoria';
+
+  @override
+  String get addReminder => 'Aggiungi promemoria';
+
+  @override
+  String get addReminderTitle => 'Nuovo promemoria';
+
+  @override
+  String get reminderTitleLabel => 'Titolo';
+
+  @override
+  String get reminderTitleHint => 'Es. Vaccino annuale';
+
+  @override
+  String get reminderTitleRequired => 'Inserisci un titolo';
+
+  @override
+  String get reminderCategoryLabel => 'Categoria';
+
+  @override
+  String get reminderDateLabel => 'Data';
+
+  @override
+  String get reminderTimeLabel => 'Ora';
+
+  @override
+  String get reminderNotesLabel => 'Note';
+
+  @override
+  String get reminderNotesHint => 'Opzionale';
+
+  @override
+  String get saveReminder => 'Salva promemoria';
+
+  @override
+  String get reminderSaved => 'Promemoria salvato';
+
+  @override
+  String get noRemindersTitle => 'Nessun promemoria';
+
+  @override
+  String get noRemindersDescription =>
+      'Aggiungi una scadenza per ricordare visite, vaccini, antiparassitari, farmaci o attività del pet.';
+
+  @override
+  String get reminderCategoryVaccine => 'Vaccino';
+
+  @override
+  String get reminderCategoryAntiparasitic => 'Antiparassitario';
+
+  @override
+  String get reminderCategoryVetVisit => 'Visita veterinaria';
+
+  @override
+  String get reminderCategoryCheckup => 'Controllo';
+
+  @override
+  String get reminderCategoryMedication => 'Farmaco';
+
+  @override
+  String get reminderCategoryInsurance => 'Assicurazione';
+
+  @override
+  String get reminderCategoryGrooming => 'Toelettatura';
+
+  @override
+  String get reminderCategoryCustom => 'Personalizzato';
+
+  @override
+  String get reminderStatusActive => 'Attivo';
+
+  @override
+  String get reminderStatusCompleted => 'Completato';
+
+  @override
+  String get reminderStatusPostponed => 'Rimandato';
+
+  @override
+  String get reminderStatusSkipped => 'Saltato';
+
+  @override
+  String get completeReminder => 'Completa';
+
+  @override
+  String get postponeReminder => 'Rimanda 1 giorno';
+
+  @override
+  String get skipReminder => 'Salta';
+
+  @override
+  String get reminderCompleted => 'Promemoria completato';
+
+  @override
+  String get reminderPostponed => 'Promemoria rimandato';
+
+  @override
+  String get reminderSkipped => 'Promemoria saltato';
 }
