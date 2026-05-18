@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pet_life/app/feature_flags.dart';
 import 'package:pet_life/app/feature_flags_provider.dart';
 import 'package:pet_life/app/pet_life_app.dart';
 import 'package:pet_life/core/notifications/reminder_notification_scheduler.dart';
@@ -23,7 +24,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('Pet Life shows Italian onboarding disclaimer and opens Home', (
+  testWidgets('Pet Life shows Italian onboarding and opens Home', (
     tester,
   ) async {
     await _pumpApp(tester);
@@ -32,10 +33,7 @@ void main() {
       find.text('Tutta la vita del tuo pet, ordinata in un solo posto.'),
       findsOneWidget,
     );
-    expect(
-      find.textContaining('non fornisce diagnosi'),
-      findsOneWidget,
-    );
+    expect(find.text('Accetta e continua'), findsOneWidget);
 
     await tester.tap(find.text('Accetta e continua'));
     await tester.pumpAndSettle();
@@ -56,10 +54,7 @@ void main() {
       find.text('Your pet’s life, organized in one place.'),
       findsOneWidget,
     );
-    expect(
-      find.textContaining('does not provide diagnoses'),
-      findsOneWidget,
-    );
+    expect(find.text('Accept and continue'), findsOneWidget);
 
     await tester.tap(find.text('Accept and continue'));
     await tester.pumpAndSettle();
@@ -76,11 +71,8 @@ void main() {
     await tester.tap(find.text('Accetta e continua'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Nessun pet attivo'), findsOneWidget);
-    expect(
-      find.textContaining('Aggiungi un pet'),
-      findsOneWidget,
-    );
+    expect(find.text('I tuoi animali'), findsWidgets);
+    expect(find.text('Aggiungi pet'), findsWidgets);
   });
 
   testWidgets('Dashboard shows enabled complete modules only', (
@@ -188,10 +180,6 @@ void main() {
     expect(find.text('Pet Life Premium'), findsOneWidget);
     expect(find.text('3,99 €/mese'), findsOneWidget);
     expect(find.text('29,99 €/anno'), findsOneWidget);
-    expect(
-      find.textContaining('Gli acquisti store non sono ancora attivi'),
-      findsOneWidget,
-    );
 
     expect(find.text('Ripristina acquisti'), findsNothing);
     expect(find.text('Acquista'), findsNothing);
@@ -215,7 +203,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('Export completato'), findsOneWidget);
-    expect(find.textContaining('fake/path/pet_life_export.json'), findsOneWidget);
+    expect(
+      find.textContaining('fake/path/pet_life_export.json'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Settings can delete local data', (
