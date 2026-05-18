@@ -38,7 +38,7 @@ const defaultFeatureFlags = FeatureFlags(
   documentsModuleEnabled: true,
   healthDiaryModuleEnabled: true,
   weightModuleEnabled: true,
-  foodModuleEnabled: false,
+  foodModuleEnabled: true,
   symptomsModuleEnabled: true,
   medicationsModuleEnabled: false,
   visitsModuleEnabled: false,

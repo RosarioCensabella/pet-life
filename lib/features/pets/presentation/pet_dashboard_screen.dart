@@ -165,8 +165,12 @@ class PetDashboardScreen extends ConsumerWidget {
         PetModuleItem(
           icon: Icons.restaurant_outlined,
           title: l10n.moduleFoodTitle,
-          description: '',
-          onTap: () {},
+          description: _localized(
+            context,
+            it: 'Tieni traccia dei pasti senza consigli nutrizionali automatici.',
+            en: 'Track meals without automatic nutrition advice.',
+          ),
+          onTap: () => context.push('/pets/${pet.id}/food'),
         ),
       );
     }
