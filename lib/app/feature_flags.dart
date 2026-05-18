@@ -42,7 +42,7 @@ const defaultFeatureFlags = FeatureFlags(
   symptomsModuleEnabled: true,
   medicationsModuleEnabled: true,
   visitsModuleEnabled: true,
-  expensesModuleEnabled: false,
+  expensesModuleEnabled: true,
   insuranceModuleEnabled: false,
   reportsModuleEnabled: false,
   subscriptionModuleEnabled: true,

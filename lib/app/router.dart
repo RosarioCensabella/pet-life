@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../features/calendar/presentation/calendar_screen.dart';
 import '../features/documents/presentation/add_document_screen.dart';
 import '../features/documents/presentation/documents_screen.dart';
+import '../features/expenses/presentation/expenses_screen.dart';
 import '../features/food/presentation/food_screen.dart';
 import '../features/health/domain/health_entry.dart';
 import '../features/health/presentation/health_screen.dart';
@@ -156,6 +157,14 @@ GoRouter buildAppRouter() {
           final petId = state.pathParameters['petId']!;
 
           return VisitsScreen(petId: petId);
+        },
+      ),
+      GoRoute(
+        path: '/pets/:petId/expenses',
+        builder: (context, state) {
+          final petId = state.pathParameters['petId']!;
+
+          return ExpensesScreen(petId: petId);
         },
       ),
     ],

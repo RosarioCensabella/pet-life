@@ -7,6 +7,7 @@ import '../../../app/feature_flags_provider.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../shared/presentation/pet_life_navigation_bar.dart';
 import '../../documents/application/pet_document_controller.dart';
+import '../../expenses/application/expense_controller.dart';
 import '../../food/application/food_controller.dart';
 import '../../health/application/health_controller.dart';
 import '../../medications/application/medication_controller.dart';
@@ -169,6 +170,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ref.invalidate(foodControllerProvider);
       ref.invalidate(medicationControllerProvider);
       ref.invalidate(visitControllerProvider);
+      ref.invalidate(expenseControllerProvider);
 
       if (!mounted) {
         return;

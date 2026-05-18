@@ -20,6 +20,7 @@ class LocalAppDataService implements AppDataService {
   static const _foodEntriesKey = 'pet_life_food_entries_v1';
   static const _medicationEntriesKey = 'pet_life_medication_entries_v1';
   static const _visitEntriesKey = 'pet_life_visit_entries_v1';
+  static const _expenseEntriesKey = 'pet_life_expense_entries_v1';
 
   final SharedPreferences _preferences;
 
@@ -49,6 +50,9 @@ class LocalAppDataService implements AppDataService {
         ),
         'visitEntries': _decodeList(
           _preferences.getString(_visitEntriesKey),
+        ),
+        'expenseEntries': _decodeList(
+          _preferences.getString(_expenseEntriesKey),
         ),
       },
       'medicalDisclaimer':
@@ -94,6 +98,7 @@ class LocalAppDataService implements AppDataService {
     await _preferences.remove(_foodEntriesKey);
     await _preferences.remove(_medicationEntriesKey);
     await _preferences.remove(_visitEntriesKey);
+    await _preferences.remove(_expenseEntriesKey);
   }
 
   List<dynamic> _decodeList(String? rawValue) {

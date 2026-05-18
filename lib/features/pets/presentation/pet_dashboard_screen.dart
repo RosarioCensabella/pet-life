@@ -225,8 +225,12 @@ class PetDashboardScreen extends ConsumerWidget {
         PetModuleItem(
           icon: Icons.receipt_long_outlined,
           title: l10n.moduleExpensesTitle,
-          description: '',
-          onTap: () {},
+          description: _localized(
+            context,
+            it: 'Tieni traccia dei costi del pet in modo semplice e ordinato.',
+            en: 'Track pet-related costs in a simple, organized way.',
+          ),
+          onTap: () => context.push('/pets/${pet.id}/expenses'),
         ),
       );
     }
