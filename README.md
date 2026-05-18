@@ -51,6 +51,7 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 - Creazione promemoria
 - Stati promemoria: attivo, completato, rimandato, saltato
 - Notifiche locali per promemoria
+- UX permessi notifiche da Impostazioni
 - Modulo Promemoria visibile nella dashboard
 - Home con prossime scadenze
 - Calendario globale cross-pet
@@ -71,13 +72,18 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 - Pricing Premium: 3,99 €/mese e 29,99 €/anno
 - Gating Premium predisposto
 - Azioni store reali nascoste dietro feature flag
+- Documentazione release Android v1.0
+- Draft store listing IT/EN
+- Checklist Data Safety Google Play
+- Release notes v1.0
 
 ### Prossima fase
 
-- Configurazione prodotti App Store / Google Play
+- Configurazione signing release Android
+- Generazione AAB release firmato
+- Configurazione prodotti Google Play
 - Integrazione acquisti reali e restore purchases
-- Miglioramento UX permessi notifiche
-- Preparazione store listing
+- Preparazione screenshot store
 
 ## Comandi principali
 
@@ -86,6 +92,7 @@ flutter gen-l10n
 flutter analyze
 flutter test
 flutter build apk --debug
+flutter build appbundle --release
 flutter run
 Regole prodotto non negoziabili
 Nessuna diagnosi medica
