@@ -76,14 +76,19 @@ Per sintomi preoccupanti o persistenti, l'utente deve contattare il veterinario.
 - Draft store listing IT/EN
 - Checklist Data Safety Google Play
 - Release notes v1.0
+- Android release signing configurato
+- AAB release firmato generabile
+- Play Store submission pack
 
 ### Prossima fase
 
-- Configurazione signing release Android
-- Generazione AAB release firmato
-- Configurazione prodotti Google Play
-- Integrazione acquisti reali e restore purchases
-- Preparazione screenshot store
+- Pubblicare Privacy Policy e Terms su URL pubblico
+- Preparare screenshot store
+- Creare Play Console app
+- Caricare AAB in internal testing
+- Compilare Data Safety e Health declaration
+- Preparare closed/internal testing
+- Configurare prodotti Google Play solo quando billing reale sarà implementato
 
 ## Comandi principali
 

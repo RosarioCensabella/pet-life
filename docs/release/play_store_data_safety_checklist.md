@@ -1,12 +1,24 @@
 # Pet Life — Google Play Data Safety Checklist v1.0
 
-Google Play requires developers to complete the Data safety section in Play Console, explaining whether and how the app collects, shares, and protects user data.
-
-## App data model v1.0
+## Current build behavior
 
 Pet Life v1.0 stores user-entered data locally on the device.
 
-Data categories handled locally:
+The current build does not include:
+
+- Cloud account
+- Login
+- Backend sync
+- Analytics SDK
+- Crash reporting SDK
+- Ads SDK
+- Billing SDK
+- Social features
+- Public user-generated content
+
+## Data handled locally
+
+Pet Life v1.0 handles the following data locally:
 
 - Pet name
 - Pet species
@@ -16,90 +28,150 @@ Data categories handled locally:
 - Microchip text field
 - Veterinarian name text field
 - Reminder titles
-- Reminder dates
+- Reminder dates and times
 - Reminder notes
 - Document titles
 - Document categories
 - Document notes
+- Local document files selected by the user
 - Local document file paths
-- Locally selected document files
+- Exported JSON files created by the user
 
-## Cloud/account status
+## Data Safety answer guidance
 
-- No cloud account in v1.0
-- No sign-in in v1.0
-- No backend database in v1.0
-- No server-side data sync in v1.0
+### Data collection
 
-## Data export and deletion
+Recommended answer for the current v1.0 build:
 
-In-app controls:
+- No user data is collected by the developer, if “collected” means transmitted off-device to the developer or a third party.
 
-- Export local data as JSON
-- Delete local data from the device
+Reason:
 
-If future versions add account creation, Google Play account deletion requirements must be implemented before release.
+- User-entered data remains local on the user’s device.
+- No backend is configured.
+- No analytics or crash SDK is enabled.
+- No account is created.
 
-## Data sharing
+Important:
 
-Current intended answer:
+If any SDK or backend is added later, this answer must be reviewed and updated.
 
-- Pet Life does not sell personal data.
-- Pet Life v1.0 does not send pet health data to a backend.
-- Pet Life v1.0 does not share user-entered pet data with third parties.
+### Data sharing
 
-## Analytics and crash reporting
+Recommended answer:
 
-Current v1.0 state:
+- No data is shared with third parties.
 
-- Analytics not enabled
-- Crash reporting not enabled
+Reason:
 
-If Firebase Analytics, Crashlytics or another SDK is added later, update this checklist and the Play Console Data safety form before release.
+- No user-entered data is transmitted to third parties in v1.0.
+
+### Data deletion
+
+Recommended answer:
+
+- Users can delete local app data inside the app.
+
+In-app path:
+
+Settings → Data management → Delete local data
+
+### Data export
+
+In-app path:
+
+Settings → Data management → Export data
+
+### Encryption in transit
+
+Recommended answer:
+
+- Not applicable for user-entered pet data in v1.0 because the app does not transmit this data.
+
+If a backend is added later:
+
+- Use HTTPS/TLS.
+- Update the privacy policy.
+- Update Data Safety.
+- Add account deletion if user accounts are introduced.
 
 ## Permissions
 
-### Notifications
+### Notification permission
 
 Permission:
 
-- `POST_NOTIFICATIONS`
+- `android.permission.POST_NOTIFICATIONS`
 
 Purpose:
 
-- Send reminders for due dates and care tasks created by the user.
+- Send reminders and due date notifications created by the user.
 
 Not used for:
 
 - Advertising
-- Promotional push notifications
+- Promotional notifications
 - Medical advice
-- Emergency alerts
+- Emergency guidance
 
-## Medical/veterinary positioning
+## Account deletion
 
-Pet Life is an organizer, diary and document archive.
+Current v1.0 state:
+
+- No account creation.
+
+Recommended answer:
+
+- Not applicable, because Pet Life v1.0 does not create accounts.
+
+If account creation is added later:
+
+- Add in-app account deletion.
+- Add web account deletion URL if required.
+- Update Play Console Data Safety.
+
+## Health declaration support
+
+Pet Life is an organizer, diary and document archive for pet care.
 
 Pet Life does not provide:
 
-- Diagnoses
+- Diagnosis
 - Triage
 - Prescriptions
 - Treatment plans
 - Dosage calculations
-- Emergency medical guidance
+- Emergency guidance
+- Vet consultation
+- Human health services
 
-## Play Console answers to review before submission
+Suggested declaration wording:
 
-- Does the app collect or share user data?
-- Is data encrypted in transit?
-- Can users request data deletion?
-- Does the app use permissions in a way consistent with the declared purpose?
-- Does the app include health-related claims?
-- Does the app include subscriptions or in-app purchases?
+Pet Life helps users organize pet profiles, reminders and local documents. The app does not provide medical or veterinary advice, diagnosis, triage, prescriptions, dosage calculation or emergency guidance. Users are instructed to contact a veterinarian for health concerns.
 
-## Release note
+## Subscription state
 
-Before production release, verify that the Play Console Data safety form exactly matches the app behavior in the submitted build.
+Current v1.0 state:
 
-Google Play’s Data safety form is required in Play Console and is shown to users on the store listing, so it must match the submitted build behavior. ---
+- Premium screen is informational only.
+- No real purchases are enabled.
+- Restore purchases is hidden.
+- No billing SDK is active.
+
+If billing is enabled later:
+
+- Update Data Safety according to the billing SDK behavior.
+- Update store listing.
+- Add manage/cancel subscription method.
+- Add restore purchases.
+- Test in internal or closed testing before production.
+
+## Final review before submission
+
+Before submitting, verify:
+
+- The AAB submitted is the same behavior described here.
+- No analytics/crash/billing SDK has been added without updating Data Safety.
+- Privacy Policy URL is live.
+- Data Safety answers match the submitted artifact.
+- Health declaration matches the submitted artifact.
