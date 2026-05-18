@@ -41,7 +41,7 @@ const defaultFeatureFlags = FeatureFlags(
   foodModuleEnabled: true,
   symptomsModuleEnabled: true,
   medicationsModuleEnabled: true,
-  visitsModuleEnabled: false,
+  visitsModuleEnabled: true,
   expensesModuleEnabled: false,
   insuranceModuleEnabled: false,
   reportsModuleEnabled: false,

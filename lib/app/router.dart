@@ -17,6 +17,7 @@ import '../features/reminders/presentation/reminders_screen.dart';
 import '../features/settings/presentation/legal_document_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/subscription/presentation/paywall_screen.dart';
+import '../features/visits/presentation/visits_screen.dart';
 import '../features/weight/presentation/weight_screen.dart';
 
 GoRouter buildAppRouter() {
@@ -147,6 +148,14 @@ GoRouter buildAppRouter() {
           final petId = state.pathParameters['petId']!;
 
           return MedicationsScreen(petId: petId);
+        },
+      ),
+      GoRoute(
+        path: '/pets/:petId/visits',
+        builder: (context, state) {
+          final petId = state.pathParameters['petId']!;
+
+          return VisitsScreen(petId: petId);
         },
       ),
     ],

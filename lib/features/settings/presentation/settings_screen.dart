@@ -14,6 +14,7 @@ import '../../pets/application/pet_controller.dart';
 import '../../reminders/application/reminder_controller.dart';
 import '../../subscription/application/subscription_controller.dart';
 import '../../subscription/domain/subscription_plan.dart';
+import '../../visits/application/visit_controller.dart';
 import '../../weight/application/weight_controller.dart';
 import '../application/app_data_service_provider.dart';
 import '../application/notification_permission_controller.dart';
@@ -167,6 +168,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ref.invalidate(healthControllerProvider);
       ref.invalidate(foodControllerProvider);
       ref.invalidate(medicationControllerProvider);
+      ref.invalidate(visitControllerProvider);
 
       if (!mounted) {
         return;

@@ -99,8 +99,8 @@ void main() {
     expect(find.text('Alimentazione'), findsOneWidget);
     expect(find.text('Sintomi'), findsOneWidget);
     expect(find.text('Farmaci'), findsOneWidget);
+    expect(find.text('Visite'), findsOneWidget);
 
-    expect(find.text('Visite'), findsNothing);
     expect(find.text('Spese'), findsNothing);
     expect(find.text('Assicurazione'), findsNothing);
     expect(find.text('Report'), findsNothing);

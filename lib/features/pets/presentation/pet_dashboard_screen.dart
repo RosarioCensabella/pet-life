@@ -210,8 +210,12 @@ class PetDashboardScreen extends ConsumerWidget {
         PetModuleItem(
           icon: Icons.local_hospital_outlined,
           title: l10n.moduleVisitsTitle,
-          description: '',
-          onTap: () {},
+          description: _localized(
+            context,
+            it: 'Registro visite, esiti e prossimi controlli senza diagnosi generate.',
+            en: 'Track visits, outcomes and follow-ups without generated diagnoses.',
+          ),
+          onTap: () => context.push('/pets/${pet.id}/visits'),
         ),
       );
     }
