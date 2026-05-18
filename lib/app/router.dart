@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import '../features/calendar/presentation/calendar_screen.dart';
 import '../features/documents/presentation/add_document_screen.dart';
 import '../features/documents/presentation/documents_screen.dart';
+import '../features/health/domain/health_entry.dart';
+import '../features/health/presentation/health_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/pets/presentation/add_pet_screen.dart';
@@ -105,6 +107,28 @@ GoRouter buildAppRouter() {
           final petId = state.pathParameters['petId']!;
 
           return WeightScreen(petId: petId);
+        },
+      ),
+      GoRoute(
+        path: '/pets/:petId/health-diary',
+        builder: (context, state) {
+          final petId = state.pathParameters['petId']!;
+
+          return HealthScreen(
+            petId: petId,
+            initialType: HealthEntryType.diary,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/pets/:petId/symptoms',
+        builder: (context, state) {
+          final petId = state.pathParameters['petId']!;
+
+          return HealthScreen(
+            petId: petId,
+            initialType: HealthEntryType.symptom,
+          );
         },
       ),
     ],

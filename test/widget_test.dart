@@ -125,7 +125,8 @@ void main() {
     expect(find.text('Profilo'), findsOneWidget);
     expect(find.text('Promemoria'), findsOneWidget);
     expect(find.text('Documenti'), findsOneWidget);
-    expect(find.text('Diario salute'), findsNothing);
+    expect(find.text('Diario salute'), findsOneWidget);
+    expect(find.text('Sintomi'), findsOneWidget);
     expect(find.text('Farmaci'), findsNothing);
   });
 

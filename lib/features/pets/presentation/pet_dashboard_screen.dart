@@ -130,6 +130,21 @@ class PetDashboardScreen extends ConsumerWidget {
       );
     }
 
+    if (featureFlags.healthDiaryModuleEnabled) {
+      modules.add(
+        PetModuleItem(
+          icon: Icons.edit_note_outlined,
+          title: l10n.moduleHealthDiaryTitle,
+          description: _localized(
+            context,
+            it: 'Note datate per preparare meglio le visite, senza diagnosi.',
+            en: 'Dated notes to prepare visits, without diagnosis.',
+          ),
+          onTap: () => context.push('/pets/${pet.id}/health-diary'),
+        ),
+      );
+    }
+
     if (featureFlags.weightModuleEnabled) {
       modules.add(
         PetModuleItem(
@@ -141,17 +156,6 @@ class PetDashboardScreen extends ConsumerWidget {
             en: 'Track weight over time without medical interpretation.',
           ),
           onTap: () => context.push('/pets/${pet.id}/weight'),
-        ),
-      );
-    }
-
-    if (featureFlags.healthDiaryModuleEnabled) {
-      modules.add(
-        PetModuleItem(
-          icon: Icons.edit_note_outlined,
-          title: l10n.moduleHealthDiaryTitle,
-          description: '',
-          onTap: () {},
         ),
       );
     }
@@ -172,8 +176,12 @@ class PetDashboardScreen extends ConsumerWidget {
         PetModuleItem(
           icon: Icons.visibility_outlined,
           title: l10n.moduleSymptomsTitle,
-          description: '',
-          onTap: () {},
+          description: _localized(
+            context,
+            it: 'Registra osservazioni e intensità, senza triage o consigli.',
+            en: 'Record observations and intensity, without triage or advice.',
+          ),
+          onTap: () => context.push('/pets/${pet.id}/symptoms'),
         ),
       );
     }
