@@ -75,3 +75,9 @@ firebase-service-account*.json
 revenuecat_private_key*
 apple_api_key*
 play_store_service_account*.json
+
+# Android release signing secrets
+android/key.properties
+android/keystore/
+*.jks
+*.keystore
