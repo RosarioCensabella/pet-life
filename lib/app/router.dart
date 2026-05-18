@@ -13,6 +13,7 @@ import '../features/reminders/presentation/reminders_screen.dart';
 import '../features/settings/presentation/legal_document_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/subscription/presentation/paywall_screen.dart';
+import '../features/weight/presentation/weight_screen.dart';
 
 GoRouter buildAppRouter() {
   return GoRouter(
@@ -96,6 +97,14 @@ GoRouter buildAppRouter() {
           final petId = state.pathParameters['petId']!;
 
           return AddDocumentScreen(petId: petId);
+        },
+      ),
+      GoRoute(
+        path: '/pets/:petId/weight',
+        builder: (context, state) {
+          final petId = state.pathParameters['petId']!;
+
+          return WeightScreen(petId: petId);
         },
       ),
     ],

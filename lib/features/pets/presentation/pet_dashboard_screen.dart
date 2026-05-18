@@ -130,22 +130,26 @@ class PetDashboardScreen extends ConsumerWidget {
       );
     }
 
-    if (featureFlags.healthDiaryModuleEnabled) {
-      modules.add(
-        PetModuleItem(
-          icon: Icons.edit_note_outlined,
-          title: l10n.moduleHealthDiaryTitle,
-          description: '',
-          onTap: () {},
-        ),
-      );
-    }
-
     if (featureFlags.weightModuleEnabled) {
       modules.add(
         PetModuleItem(
           icon: Icons.monitor_weight_outlined,
           title: l10n.moduleWeightTitle,
+          description: _localized(
+            context,
+            it: 'Registra il peso nel tempo senza interpretazioni mediche.',
+            en: 'Track weight over time without medical interpretation.',
+          ),
+          onTap: () => context.push('/pets/${pet.id}/weight'),
+        ),
+      );
+    }
+
+    if (featureFlags.healthDiaryModuleEnabled) {
+      modules.add(
+        PetModuleItem(
+          icon: Icons.edit_note_outlined,
+          title: l10n.moduleHealthDiaryTitle,
           description: '',
           onTap: () {},
         ),
@@ -299,6 +303,16 @@ class PetDashboardScreen extends ConsumerWidget {
       PetSex.female => l10n.sexFemale,
       PetSex.male => l10n.sexMale,
     };
+  }
+
+  String _localized(
+    BuildContext context, {
+    required String it,
+    required String en,
+  }) {
+    final languageCode = Localizations.localeOf(context).languageCode;
+
+    return languageCode == 'en' ? en : it;
   }
 }
 

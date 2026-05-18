@@ -15,6 +15,7 @@ class LocalAppDataService implements AppDataService {
   static const _petsKey = 'pet_life_pets_v1';
   static const _remindersKey = 'pet_life_reminders_v1';
   static const _documentsKey = 'pet_life_documents_v1';
+  static const _weightEntriesKey = 'pet_life_weight_entries_v1';
 
   final SharedPreferences _preferences;
 
@@ -30,6 +31,9 @@ class LocalAppDataService implements AppDataService {
         'pets': _decodeList(_preferences.getString(_petsKey)),
         'reminders': _decodeList(_preferences.getString(_remindersKey)),
         'documents': _decodeList(_preferences.getString(_documentsKey)),
+        'weightEntries': _decodeList(
+          _preferences.getString(_weightEntriesKey),
+        ),
       },
       'medicalDisclaimer':
           'Pet Life organizes information and reminders only. It does not provide diagnoses, treatments, prescriptions or medical advice.',
@@ -69,6 +73,7 @@ class LocalAppDataService implements AppDataService {
     await _preferences.remove(_petsKey);
     await _preferences.remove(_remindersKey);
     await _preferences.remove(_documentsKey);
+    await _preferences.remove(_weightEntriesKey);
   }
 
   List<dynamic> _decodeList(String? rawValue) {
