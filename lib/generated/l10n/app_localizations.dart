@@ -986,6 +986,12 @@ abstract class AppLocalizations {
   /// **'Abbonamento'**
   String get settingsSubscriptionSection;
 
+  /// No description provided for @settingsNotificationsSection.
+  ///
+  /// In it, this message translates to:
+  /// **'Notifiche'**
+  String get settingsNotificationsSection;
+
   /// No description provided for @privacyPolicy.
   ///
   /// In it, this message translates to:
@@ -1099,6 +1105,60 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Pet Life non fornisce diagnosi mediche o veterinarie, triage, prescrizioni, terapie, dosaggi o indicazioni cliniche. Le informazioni salvate nell\'app servono solo per organizzare la vita del pet e prepararsi meglio alle visite. Per sintomi preoccupanti, dubbi sulla salute, farmaci, dosaggi o urgenze, contatta sempre il veterinario.'**
   String get medicalDisclaimerBody;
+
+  /// No description provided for @notificationPermissionStatus.
+  ///
+  /// In it, this message translates to:
+  /// **'Stato permesso notifiche'**
+  String get notificationPermissionStatus;
+
+  /// No description provided for @notificationPermissionGranted.
+  ///
+  /// In it, this message translates to:
+  /// **'Attive'**
+  String get notificationPermissionGranted;
+
+  /// No description provided for @notificationPermissionDenied.
+  ///
+  /// In it, this message translates to:
+  /// **'Disattivate'**
+  String get notificationPermissionDenied;
+
+  /// No description provided for @notificationPermissionUnknown.
+  ///
+  /// In it, this message translates to:
+  /// **'Non verificato'**
+  String get notificationPermissionUnknown;
+
+  /// No description provided for @requestNotificationPermission.
+  ///
+  /// In it, this message translates to:
+  /// **'Attiva notifiche'**
+  String get requestNotificationPermission;
+
+  /// No description provided for @notificationPermissionDescription.
+  ///
+  /// In it, this message translates to:
+  /// **'Pet Life usa le notifiche solo per ricordarti promemoria e scadenze che hai creato.'**
+  String get notificationPermissionDescription;
+
+  /// No description provided for @notificationPermissionGrantedMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Notifiche attivate'**
+  String get notificationPermissionGrantedMessage;
+
+  /// No description provided for @notificationPermissionDeniedMessage.
+  ///
+  /// In it, this message translates to:
+  /// **'Notifiche non attivate. Puoi abilitarle dalle impostazioni di sistema.'**
+  String get notificationPermissionDeniedMessage;
+
+  /// No description provided for @notificationPermissionStoreReviewNote.
+  ///
+  /// In it, this message translates to:
+  /// **'Pet Life non invia notifiche promozionali in questa versione.'**
+  String get notificationPermissionStoreReviewNote;
 
   /// No description provided for @subscriptionTitle.
   ///

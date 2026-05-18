@@ -12,6 +12,8 @@ import '../../reminders/application/reminder_controller.dart';
 import '../../subscription/application/subscription_controller.dart';
 import '../../subscription/domain/subscription_plan.dart';
 import '../application/app_data_service_provider.dart';
+import '../application/notification_permission_controller.dart';
+import '../domain/notification_permission_status.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -23,6 +25,29 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _isExporting = false;
   bool _isDeleting = false;
+
+  Future<void> _requestNotificationPermission() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+
+    final status = await ref
+        .read(notificationPermissionControllerProvider.notifier)
+        .requestPermission();
+
+    if (!mounted) {
+      return;
+    }
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          status == NotificationPermissionStatus.granted
+              ? l10n.notificationPermissionGrantedMessage
+              : l10n.notificationPermissionDeniedMessage,
+        ),
+      ),
+    );
+  }
 
   Future<void> _exportData() async {
     final l10n = AppLocalizations.of(context)!;
@@ -158,10 +183,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final l10n = AppLocalizations.of(context)!;
     final featureFlags = ref.watch(featureFlagsProvider);
     final subscriptionStatus = ref.watch(subscriptionControllerProvider);
+    final notificationPermissionState =
+        ref.watch(notificationPermissionControllerProvider);
 
     final planLabel = subscriptionStatus.currentTier == SubscriptionTier.premium
         ? l10n.premiumPlan
         : l10n.freePlan;
+
+    final notificationStatusLabel = notificationPermissionState.when(
+      data: (status) => _notificationStatusLabel(l10n, status),
+      error: (error, stackTrace) => l10n.notificationPermissionUnknown,
+      loading: () => l10n.notificationPermissionUnknown,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -182,6 +215,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ],
             ),
+          _SettingsSection(
+            title: l10n.settingsNotificationsSection,
+            children: [
+              _SettingsTile(
+                icon: Icons.notifications_active_outlined,
+                title: l10n.notificationPermissionStatus,
+                subtitle: notificationStatusLabel,
+                onTap: () => ref
+                    .read(notificationPermissionControllerProvider.notifier)
+                    .loadStatus(),
+              ),
+              _SettingsTile(
+                icon: Icons.notification_add_outlined,
+                title: l10n.requestNotificationPermission,
+                subtitle: l10n.notificationPermissionDescription,
+                isBusy: notificationPermissionState.isLoading,
+                onTap: notificationPermissionState.isLoading
+                    ? null
+                    : _requestNotificationPermission,
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Text(
+                  l10n.notificationPermissionStoreReviewNote,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            ],
+          ),
           _SettingsSection(
             title: l10n.settingsLegalSection,
             children: [
@@ -227,6 +289,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         selectedDestination: PetLifeDestination.settings,
       ),
     );
+  }
+
+  String _notificationStatusLabel(
+    AppLocalizations l10n,
+    NotificationPermissionStatus status,
+  ) {
+    return switch (status) {
+      NotificationPermissionStatus.granted =>
+        l10n.notificationPermissionGranted,
+      NotificationPermissionStatus.denied => l10n.notificationPermissionDenied,
+      NotificationPermissionStatus.unknown =>
+        l10n.notificationPermissionUnknown,
+    };
   }
 }
 

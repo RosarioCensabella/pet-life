@@ -467,6 +467,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get settingsSubscriptionSection => 'Abbonamento';
 
   @override
+  String get settingsNotificationsSection => 'Notifiche';
+
+  @override
   String get privacyPolicy => 'Privacy Policy';
 
   @override
@@ -529,6 +532,36 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get medicalDisclaimerBody =>
       'Pet Life non fornisce diagnosi mediche o veterinarie, triage, prescrizioni, terapie, dosaggi o indicazioni cliniche. Le informazioni salvate nell\'app servono solo per organizzare la vita del pet e prepararsi meglio alle visite. Per sintomi preoccupanti, dubbi sulla salute, farmaci, dosaggi o urgenze, contatta sempre il veterinario.';
+
+  @override
+  String get notificationPermissionStatus => 'Stato permesso notifiche';
+
+  @override
+  String get notificationPermissionGranted => 'Attive';
+
+  @override
+  String get notificationPermissionDenied => 'Disattivate';
+
+  @override
+  String get notificationPermissionUnknown => 'Non verificato';
+
+  @override
+  String get requestNotificationPermission => 'Attiva notifiche';
+
+  @override
+  String get notificationPermissionDescription =>
+      'Pet Life usa le notifiche solo per ricordarti promemoria e scadenze che hai creato.';
+
+  @override
+  String get notificationPermissionGrantedMessage => 'Notifiche attivate';
+
+  @override
+  String get notificationPermissionDeniedMessage =>
+      'Notifiche non attivate. Puoi abilitarle dalle impostazioni di sistema.';
+
+  @override
+  String get notificationPermissionStoreReviewNote =>
+      'Pet Life non invia notifiche promozionali in questa versione.';
 
   @override
   String get subscriptionTitle => 'Abbonamento';
