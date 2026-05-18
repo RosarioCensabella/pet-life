@@ -7,6 +7,7 @@ import '../features/food/presentation/food_screen.dart';
 import '../features/health/domain/health_entry.dart';
 import '../features/health/presentation/health_screen.dart';
 import '../features/home/presentation/home_screen.dart';
+import '../features/medications/presentation/medications_screen.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/pets/presentation/add_pet_screen.dart';
 import '../features/pets/presentation/edit_pet_screen.dart';
@@ -138,6 +139,14 @@ GoRouter buildAppRouter() {
           final petId = state.pathParameters['petId']!;
 
           return FoodScreen(petId: petId);
+        },
+      ),
+      GoRoute(
+        path: '/pets/:petId/medications',
+        builder: (context, state) {
+          final petId = state.pathParameters['petId']!;
+
+          return MedicationsScreen(petId: petId);
         },
       ),
     ],

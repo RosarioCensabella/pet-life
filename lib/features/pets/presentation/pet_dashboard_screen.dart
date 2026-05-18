@@ -195,8 +195,12 @@ class PetDashboardScreen extends ConsumerWidget {
         PetModuleItem(
           icon: Icons.medication_outlined,
           title: l10n.moduleMedicationsTitle,
-          description: '',
-          onTap: () {},
+          description: _localized(
+            context,
+            it: 'Registro dei farmaci indicati dal veterinario, senza dosaggi suggeriti.',
+            en: 'Medication records from your veterinarian, without dosage suggestions.',
+          ),
+          onTap: () => context.push('/pets/${pet.id}/medications'),
         ),
       );
     }

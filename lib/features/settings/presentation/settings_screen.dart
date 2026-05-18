@@ -7,10 +7,14 @@ import '../../../app/feature_flags_provider.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../shared/presentation/pet_life_navigation_bar.dart';
 import '../../documents/application/pet_document_controller.dart';
+import '../../food/application/food_controller.dart';
+import '../../health/application/health_controller.dart';
+import '../../medications/application/medication_controller.dart';
 import '../../pets/application/pet_controller.dart';
 import '../../reminders/application/reminder_controller.dart';
 import '../../subscription/application/subscription_controller.dart';
 import '../../subscription/domain/subscription_plan.dart';
+import '../../weight/application/weight_controller.dart';
 import '../application/app_data_service_provider.dart';
 import '../application/notification_permission_controller.dart';
 import '../domain/notification_permission_status.dart';
@@ -159,6 +163,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ref.invalidate(petControllerProvider);
       ref.invalidate(reminderControllerProvider);
       ref.invalidate(petDocumentControllerProvider);
+      ref.invalidate(weightControllerProvider);
+      ref.invalidate(healthControllerProvider);
+      ref.invalidate(foodControllerProvider);
+      ref.invalidate(medicationControllerProvider);
 
       if (!mounted) {
         return;

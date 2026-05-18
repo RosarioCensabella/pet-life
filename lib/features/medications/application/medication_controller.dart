@@ -1,0 +1,89 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../pets/application/pet_controller.dart';
+import '../data/medication_local_storage.dart';
+import '../domain/medication_entry.dart';
+
+final medicationLocalStorageProvider = FutureProvider<MedicationLocalStorage>(
+  (ref) async {
+    final preferences = await ref.watch(sharedPreferencesProvider.future);
+
+    return MedicationLocalStorage(preferences: preferences);
+  },
+);
+
+final medicationControllerProvider = StateNotifierProvider<
+    MedicationController, AsyncValue<List<MedicationEntry>>>(
+  (ref) {
+    final controller = MedicationController(ref: ref);
+    controller.loadEntries();
+
+    return controller;
+  },
+);
+
+class MedicationController
+    extends StateNotifier<AsyncValue<List<MedicationEntry>>> {
+  MedicationController({
+    required Ref ref,
+  })  : _ref = ref,
+        super(const AsyncValue.loading());
+
+  final Ref _ref;
+
+  Future<void> loadEntries() async {
+    try {
+      final storage = await _ref.read(medicationLocalStorageProvider.future);
+      final entries = storage.getEntries();
+
+      state = AsyncValue.data(_sortEntries(entries));
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+    }
+  }
+
+  List<MedicationEntry> entriesForPet(String petId) {
+    final entries = state.valueOrNull ?? const [];
+
+    return entries
+        .where((entry) => entry.petId == petId)
+        .toList(growable: false);
+  }
+
+  Future<void> addEntry(MedicationEntry entry) async {
+    final currentEntries = state.valueOrNull ?? const [];
+    final updatedEntries = [...currentEntries, entry];
+
+    await _saveAndEmit(updatedEntries);
+  }
+
+  Future<void> deleteEntry(String entryId) async {
+    final currentEntries = state.valueOrNull ?? const [];
+    final updatedEntries = currentEntries
+        .where((entry) => entry.id != entryId)
+        .toList(growable: false);
+
+    await _saveAndEmit(updatedEntries);
+  }
+
+  Future<void> _saveAndEmit(List<MedicationEntry> entries) async {
+    final sortedEntries = _sortEntries(entries);
+
+    state = AsyncValue.data(sortedEntries);
+
+    try {
+      final storage = await _ref.read(medicationLocalStorageProvider.future);
+      await storage.saveEntries(sortedEntries);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+    }
+  }
+
+  List<MedicationEntry> _sortEntries(List<MedicationEntry> entries) {
+    final sorted = [...entries];
+
+    sorted.sort((a, b) => b.startDate.compareTo(a.startDate));
+
+    return sorted;
+  }
+}
