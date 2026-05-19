@@ -22,65 +22,157 @@ void main() {
     _seedPet();
   });
 
-  testWidgets('User can add and delete a medication entry without dosage advice', (
-    tester,
-  ) async {
-    await _pumpApp(tester);
+  testWidgets(
+    'User can add editable medication and recurring automatic reminders without dosage advice',
+    (tester) async {
+      final scheduler = FakeReminderNotificationScheduler();
 
-    await tester.tap(find.text('Accetta e continua'));
-    await tester.pumpAndSettle();
+      await _pumpApp(
+        tester,
+        scheduler: scheduler,
+      );
 
-    await tester.tap(find.text('Luna'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Accetta e continua'));
+      await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Farmaci'));
-    await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Luna'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Farmaci'), findsOneWidget);
+      await tester.ensureVisible(find.text('Farmaci'));
+      await tester.pump(const Duration(milliseconds: 300));
 
-    await tester.tap(find.text('Farmaci'));
-    await tester.pumpAndSettle();
+      expect(find.text('Farmaci'), findsOneWidget);
 
-    expect(find.text('Nessun farmaco'), findsOneWidget);
-    expect(find.textContaining('non prescrive farmaci'), findsOneWidget);
-    expect(find.textContaining('non calcola dosaggi'), findsOneWidget);
+      await tester.tap(find.text('Farmaci'));
+      await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextFormField).at(0), 'Antibiotico');
-    await tester.enterText(find.byType(TextFormField).at(1), 'Dott.ssa Bianchi');
-    await tester.enterText(
-      find.byType(TextFormField).at(2),
-      'Come indicato dal veterinario',
-    );
-    await tester.enterText(
-      find.byType(TextFormField).at(3),
-      'Dopo il pasto',
-    );
+      expect(find.text('Nessun farmaco'), findsOneWidget);
+      expect(find.textContaining('non prescrive farmaci'), findsOneWidget);
+      expect(find.textContaining('non calcola dosaggi'), findsOneWidget);
+      expect(
+        find.textContaining('promemoria giornalieri automatici'),
+        findsOneWidget,
+      );
 
-    await tester.ensureVisible(find.text('Salva farmaco'));
-    await tester.pump(const Duration(milliseconds: 300));
+      await tester.enterText(find.byType(TextFormField).at(0), 'Antibiotico');
+      await tester.enterText(
+        find.byType(TextFormField).at(1),
+        'Dott.ssa Bianchi',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(2),
+        'Come indicato dal veterinario',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(3),
+        'Dopo il pasto',
+      );
 
-    await tester.tap(find.text('Salva farmaco'));
-    await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Salva farmaco'));
+      await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Antibiotico'), findsOneWidget);
-    expect(find.textContaining('Dott.ssa Bianchi'), findsOneWidget);
-    expect(find.textContaining('Come indicato dal veterinario'), findsOneWidget);
-    expect(find.text('Dopo il pasto'), findsOneWidget);
+      await tester.tap(find.text('Salva farmaco'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.delete_outline).first);
-    await tester.pumpAndSettle();
+      expect(find.text('Antibiotico'), findsOneWidget);
+      expect(find.textContaining('Dott.ssa Bianchi'), findsOneWidget);
+      expect(
+        find.textContaining('Come indicato dal veterinario'),
+        findsOneWidget,
+      );
+      expect(find.text('Dopo il pasto'), findsOneWidget);
+      expect(find.textContaining('Orari giornalieri promemoria'), findsWidgets);
+      expect(find.text('Farmaco salvato e promemoria creati'), findsOneWidget);
+      expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
 
-    expect(find.text('Eliminare questo farmaco?'), findsOneWidget);
+      expect(scheduler.scheduledReminders.length, greaterThan(1));
+      expect(
+        scheduler.scheduledReminders.every(
+          (reminder) => reminder.category == ReminderCategory.medication,
+        ),
+        isTrue,
+      );
+      expect(
+        scheduler.scheduledReminders.every(
+          (reminder) => reminder.title == 'Farmaco: Antibiotico',
+        ),
+        isTrue,
+      );
 
-    await tester.tap(find.text('Elimina'));
-    await tester.pumpAndSettle();
+      final preferences = await SharedPreferences.getInstance();
+      final rawReminders = preferences.getString('pet_life_reminders_v1');
 
-    expect(find.text('Nessun farmaco'), findsOneWidget);
-  });
+      expect(rawReminders, isNotNull);
+
+      final reminders = jsonDecode(rawReminders!) as List<dynamic>;
+
+      expect(reminders.length, greaterThan(1));
+
+      final firstMedicationReminder = reminders.first as Map<String, dynamic>;
+
+      expect(firstMedicationReminder['category'], 'medication');
+      expect(firstMedicationReminder['title'], 'Farmaco: Antibiotico');
+
+      final rawMedications =
+          preferences.getString('pet_life_medication_entries_v1');
+
+      expect(rawMedications, isNotNull);
+
+      final medications = jsonDecode(rawMedications!) as List<dynamic>;
+      final medication = medications.single as Map<String, dynamic>;
+      final reminderTimes = medication['reminderTimes'] as List<dynamic>;
+      final automaticReminderIds =
+          medication['automaticReminderIds'] as List<dynamic>;
+
+      expect(reminderTimes, hasLength(1));
+      expect(automaticReminderIds.length, scheduler.scheduledReminders.length);
+
+      await tester.tap(find.byIcon(Icons.edit_outlined));
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.text('Modifica farmaco'),
+        -500,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Modifica farmaco'), findsOneWidget);
+      expect(find.text('Aggiorna farmaco'), findsOneWidget);
+      expect(find.text('Annulla modifica'), findsOneWidget);
+
+      await tester.tap(find.text('Annulla modifica'));
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.byIcon(Icons.delete_outline),
+        500,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+
+      final scheduledReminderCount = scheduler.scheduledReminders.length;
+
+      await tester.tap(find.byIcon(Icons.delete_outline).first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Eliminare questo farmaco?'), findsOneWidget);
+
+      await tester.tap(find.text('Elimina'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nessun farmaco'), findsOneWidget);
+      expect(scheduler.cancelledReminderIds.length, scheduledReminderCount);
+    },
+  );
 }
 
-Future<void> _pumpApp(WidgetTester tester) async {
-  await tester.binding.setSurfaceSize(const Size(900, 1200));
+Future<void> _pumpApp(
+  WidgetTester tester, {
+  required FakeReminderNotificationScheduler scheduler,
+}) async {
+  await tester.binding.setSurfaceSize(const Size(900, 1400));
+
   addTearDown(() async {
     await tester.binding.setSurfaceSize(null);
   });
@@ -88,9 +180,7 @@ Future<void> _pumpApp(WidgetTester tester) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        reminderNotificationSchedulerProvider.overrideWithValue(
-          FakeReminderNotificationScheduler(),
-        ),
+        reminderNotificationSchedulerProvider.overrideWithValue(scheduler),
         documentFileServiceProvider.overrideWithValue(
           FakeDocumentFileService(),
         ),
@@ -124,6 +214,8 @@ void _seedPet() {
       'sex': 'unknown',
       'microchip': null,
       'vetName': null,
+      'profileImagePath': null,
+      'colorValue': 0xFF20B486,
       'archivedAt': null,
     }
   ]);
@@ -148,6 +240,9 @@ class FakeNotificationPermissionService
 
 class FakeReminderNotificationScheduler
     implements ReminderNotificationScheduler {
+  final scheduledReminders = <Reminder>[];
+  final cancelledReminderIds = <String>[];
+
   @override
   Future<void> initialize() async {}
 
@@ -159,10 +254,14 @@ class FakeReminderNotificationScheduler
   @override
   Future<void> scheduleReminder({
     required Reminder reminder,
-  }) async {}
+  }) async {
+    scheduledReminders.add(reminder);
+  }
 
   @override
-  Future<void> cancelReminder(String reminderId) async {}
+  Future<void> cancelReminder(String reminderId) async {
+    cancelledReminderIds.add(reminderId);
+  }
 }
 
 class FakeDocumentFileService implements DocumentFileService {

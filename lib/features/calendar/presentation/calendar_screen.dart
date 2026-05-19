@@ -66,17 +66,26 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           final activePets = pets
               .where((pet) => !pet.isArchived)
               .toList(growable: false);
+          final visibleRange = _visibleDateRange(_focusedMonth);
+
+          final medicationEntries =
+              medicationsState.valueOrNull ?? const <MedicationEntry>[];
+          final automaticMedicationReminderIds = medicationEntries
+              .expand((entry) => entry.automaticReminderIds)
+              .toSet();
 
           final events = _buildCalendarEvents(
             strings: strings,
             activePets: activePets,
+            visibleStartDate: visibleRange.start,
+            visibleEndDate: visibleRange.end,
+            automaticMedicationReminderIds: automaticMedicationReminderIds,
             reminders: remindersState.valueOrNull ?? const <Reminder>[],
             documents: documentsState.valueOrNull ?? const <PetDocument>[],
             weightEntries: weightState.valueOrNull ?? const <WeightEntry>[],
             healthEntries: healthState.valueOrNull ?? const <HealthEntry>[],
             foodEntries: foodState.valueOrNull ?? const <FoodEntry>[],
-            medicationEntries:
-                medicationsState.valueOrNull ?? const <MedicationEntry>[],
+            medicationEntries: medicationEntries,
             visitEntries: visitsState.valueOrNull ?? const <VisitEntry>[],
             expenseEntries: expensesState.valueOrNull ?? const <ExpenseEntry>[],
           );
@@ -256,9 +265,21 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         .toList(growable: false);
   }
 
+  _DateRange _visibleDateRange(DateTime focusedMonth) {
+    final firstDayOfMonth = DateTime(focusedMonth.year, focusedMonth.month);
+    final daysBefore = firstDayOfMonth.weekday - DateTime.monday;
+    final start = firstDayOfMonth.subtract(Duration(days: daysBefore));
+    final end = start.add(const Duration(days: 41));
+
+    return _DateRange(start: _dateOnly(start), end: _dateOnly(end));
+  }
+
   List<_CalendarEvent> _buildCalendarEvents({
     required _CalendarStrings strings,
     required List<Pet> activePets,
+    required DateTime visibleStartDate,
+    required DateTime visibleEndDate,
+    required Set<String> automaticMedicationReminderIds,
     required List<Reminder> reminders,
     required List<PetDocument> documents,
     required List<WeightEntry> weightEntries,
@@ -275,6 +296,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final events = <_CalendarEvent>[];
 
     for (final reminder in reminders) {
+      if (automaticMedicationReminderIds.contains(reminder.id)) {
+        continue;
+      }
+
       final pet = petById[reminder.petId];
 
       if (pet == null) {
@@ -410,37 +435,58 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         continue;
       }
 
-      events.add(
-        _CalendarEvent(
-          id: 'medication-start-${entry.id}',
-          petId: pet.id,
-          petName: pet.name,
-          petColorValue: pet.colorValue,
-          title: entry.name,
-          subtitle:
-              '${strings.medicationStart} · ${strings.medicationStatusLabel(entry.status)}',
-          date: entry.startDate,
-          route: '/pets/${pet.id}/medications',
-          icon: Icons.medication_outlined,
-          kind: _CalendarEventKind.medication,
-        ),
-      );
+      final reminderTimes = entry.reminderTimes.isEmpty
+          ? [
+              MedicationReminderTime(
+                id: 'fallback-${entry.startDate.hour}-${entry.startDate.minute}',
+                hour: entry.startDate.hour == 0 && entry.startDate.minute == 0
+                    ? 9
+                    : entry.startDate.hour,
+                minute:
+                    entry.startDate.hour == 0 && entry.startDate.minute == 0
+                        ? 0
+                        : entry.startDate.minute,
+              ),
+            ]
+          : entry.reminderTimes;
 
-      if (entry.endDate != null) {
-        events.add(
-          _CalendarEvent(
-            id: 'medication-end-${entry.id}',
-            petId: pet.id,
-            petName: pet.name,
-            petColorValue: pet.colorValue,
-            title: entry.name,
-            subtitle: strings.medicationEnd,
-            date: entry.endDate!,
-            route: '/pets/${pet.id}/medications',
-            icon: Icons.medication_liquid_outlined,
-            kind: _CalendarEventKind.medication,
-          ),
-        );
+      var currentDay = _maxDate(
+        _dateOnly(entry.startDate),
+        visibleStartDate,
+      );
+      final medicationEndDate = entry.endDate == null
+          ? visibleEndDate
+          : _minDate(_dateOnly(entry.endDate!), visibleEndDate);
+
+      while (!currentDay.isAfter(medicationEndDate)) {
+        for (final reminderTime in reminderTimes) {
+          final occurrenceDate = DateTime(
+            currentDay.year,
+            currentDay.month,
+            currentDay.day,
+            reminderTime.hour,
+            reminderTime.minute,
+          );
+
+          events.add(
+            _CalendarEvent(
+              id:
+                  'medication-${entry.id}-${_calendarDayKey(currentDay)}-${reminderTime.storageKey}',
+              petId: pet.id,
+              petName: pet.name,
+              petColorValue: pet.colorValue,
+              title: entry.name,
+              subtitle:
+                  '${strings.medicationReminder} · ${DateFormat.Hm().format(occurrenceDate)} · ${strings.medicationStatusLabel(entry.status)}',
+              date: occurrenceDate,
+              route: '/pets/${pet.id}/medications',
+              icon: Icons.medication_outlined,
+              kind: _CalendarEventKind.medication,
+            ),
+          );
+        }
+
+        currentDay = currentDay.add(const Duration(days: 1));
       }
     }
 
@@ -520,6 +566,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     });
 
     return events;
+  }
+
+  DateTime _maxDate(DateTime first, DateTime second) {
+    return first.isAfter(second) ? first : second;
+  }
+
+  DateTime _minDate(DateTime first, DateTime second) {
+    return first.isBefore(second) ? first : second;
   }
 }
 
@@ -1129,6 +1183,16 @@ class _CalendarEvent {
   final _CalendarEventKind kind;
 }
 
+class _DateRange {
+  const _DateRange({
+    required this.start,
+    required this.end,
+  });
+
+  final DateTime start;
+  final DateTime end;
+}
+
 class _CalendarStrings {
   const _CalendarStrings({
     required this.legend,
@@ -1144,8 +1208,7 @@ class _CalendarStrings {
     required this.healthDiary,
     required this.symptom,
     required this.food,
-    required this.medicationStart,
-    required this.medicationEnd,
+    required this.medicationReminder,
     required this.visit,
     required this.nextVisit,
     required this.expense,
@@ -1196,8 +1259,7 @@ class _CalendarStrings {
   final String healthDiary;
   final String symptom;
   final String food;
-  final String medicationStart;
-  final String medicationEnd;
+  final String medicationReminder;
   final String visit;
   final String nextVisit;
   final String expense;
@@ -1324,7 +1386,7 @@ class _CalendarStrings {
     if (languageCode == 'en') {
       return const _CalendarStrings(
         legend:
-            'Calendar days are marked with pet colors. If multiple pets have items on the same day, the circle is split into colored segments. This is an organizational view only and does not provide diagnosis, triage or medical advice.',
+            'Calendar days are marked with pet colors. If multiple pets have items on the same day, the circle is split into colored segments. Medication therapies are shown as daily reminder occurrences. This is an organizational view only and does not provide diagnosis, triage or medical advice.',
         previousMonth: 'Previous month',
         nextMonth: 'Next month',
         monthEvents: 'Month events',
@@ -1337,8 +1399,7 @@ class _CalendarStrings {
         healthDiary: 'Health diary',
         symptom: 'Symptom',
         food: 'Food',
-        medicationStart: 'Medication start',
-        medicationEnd: 'Medication end',
+        medicationReminder: 'Medication reminder',
         visit: 'Visit',
         nextVisit: 'Next visit',
         expense: 'Expense',
@@ -1379,7 +1440,7 @@ class _CalendarStrings {
 
     return const _CalendarStrings(
       legend:
-          'I giorni del calendario sono marcati con i colori dei pet. Se più animali hanno elementi nello stesso giorno, il cerchio viene diviso in segmenti colorati. Questa vista è solo organizzativa e non fornisce diagnosi, triage o consigli medici.',
+          'I giorni del calendario sono marcati con i colori dei pet. Se più animali hanno elementi nello stesso giorno, il cerchio viene diviso in segmenti colorati. Le terapie farmacologiche sono mostrate come occorrenze giornaliere dei promemoria. Questa vista è solo organizzativa e non fornisce diagnosi, triage o consigli medici.',
       previousMonth: 'Mese precedente',
       nextMonth: 'Mese successivo',
       monthEvents: 'Eventi del mese',
@@ -1392,8 +1453,7 @@ class _CalendarStrings {
       healthDiary: 'Diario salute',
       symptom: 'Sintomo',
       food: 'Alimentazione',
-      medicationStart: 'Inizio farmaco',
-      medicationEnd: 'Fine farmaco',
+      medicationReminder: 'Promemoria farmaco',
       visit: 'Visita',
       nextVisit: 'Prossima visita',
       expense: 'Spesa',

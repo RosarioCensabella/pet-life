@@ -5,18 +5,20 @@ import '../../pets/application/pet_controller.dart';
 import '../data/reminder_local_storage.dart';
 import '../domain/reminder.dart';
 
-final reminderLocalStorageProvider =
-    FutureProvider<ReminderLocalStorage>((ref) async {
-  final preferences = await ref.watch(sharedPreferencesProvider.future);
+final reminderLocalStorageProvider = FutureProvider<ReminderLocalStorage>(
+  (ref) async {
+    final preferences = await ref.watch(sharedPreferencesProvider.future);
 
-  return ReminderLocalStorage(preferences: preferences);
-});
+    return ReminderLocalStorage(preferences: preferences);
+  },
+);
 
 final reminderControllerProvider =
     StateNotifierProvider<ReminderController, AsyncValue<List<Reminder>>>(
   (ref) {
     final controller = ReminderController(ref: ref);
     controller.loadReminders();
+
     return controller;
   },
 );
@@ -33,6 +35,7 @@ class ReminderController extends StateNotifier<AsyncValue<List<Reminder>>> {
     try {
       final storage = await _ref.read(reminderLocalStorageProvider.future);
       final reminders = storage.getReminders();
+
       state = AsyncValue.data(_sortReminders(reminders));
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
@@ -48,6 +51,8 @@ class ReminderController extends StateNotifier<AsyncValue<List<Reminder>>> {
   }
 
   Future<void> addReminder(Reminder reminder) async {
+    await _ensureLoaded();
+
     final currentReminders = state.valueOrNull ?? const <Reminder>[];
     final updatedReminders = [...currentReminders, reminder];
 
@@ -58,9 +63,25 @@ class ReminderController extends StateNotifier<AsyncValue<List<Reminder>>> {
         );
   }
 
-  Future<void> completeReminder(String reminderId) async {
-    final now = DateTime.now();
+  Future<void> deleteReminder(String reminderId) async {
+    await _ensureLoaded();
 
+    final currentReminders = state.valueOrNull ?? const <Reminder>[];
+    final updatedReminders = currentReminders
+        .where((reminder) => reminder.id != reminderId)
+        .toList(growable: false);
+
+    await _saveAndEmit(updatedReminders);
+
+    await _ref.read(reminderNotificationSchedulerProvider).cancelReminder(
+          reminderId,
+        );
+  }
+
+  Future<void> completeReminder(String reminderId) async {
+    await _ensureLoaded();
+
+    final now = DateTime.now();
     final updatedReminders = _mapReminder(
       reminderId,
       (reminder) => reminder.copyWith(
@@ -71,14 +92,16 @@ class ReminderController extends StateNotifier<AsyncValue<List<Reminder>>> {
     );
 
     await _saveAndEmit(updatedReminders);
+
     await _ref.read(reminderNotificationSchedulerProvider).cancelReminder(
           reminderId,
         );
   }
 
   Future<void> postponeReminderByOneDay(String reminderId) async {
-    final now = DateTime.now();
+    await _ensureLoaded();
 
+    final now = DateTime.now();
     final updatedReminders = _mapReminder(
       reminderId,
       (reminder) => reminder.copyWith(
@@ -101,8 +124,9 @@ class ReminderController extends StateNotifier<AsyncValue<List<Reminder>>> {
   }
 
   Future<void> skipReminder(String reminderId) async {
-    final now = DateTime.now();
+    await _ensureLoaded();
 
+    final now = DateTime.now();
     final updatedReminders = _mapReminder(
       reminderId,
       (reminder) => reminder.copyWith(
@@ -113,9 +137,16 @@ class ReminderController extends StateNotifier<AsyncValue<List<Reminder>>> {
     );
 
     await _saveAndEmit(updatedReminders);
+
     await _ref.read(reminderNotificationSchedulerProvider).cancelReminder(
           reminderId,
         );
+  }
+
+  Future<void> _ensureLoaded() async {
+    if (state.isLoading || state.valueOrNull == null) {
+      await loadReminders();
+    }
   }
 
   Reminder? _findReminder(String reminderId) {

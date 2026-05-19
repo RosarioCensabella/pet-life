@@ -36,6 +36,7 @@ void main() {
     expect(find.textContaining('segmenti colorati'), findsOneWidget);
     expect(find.textContaining('non fornisce diagnosi'), findsOneWidget);
     expect(find.textContaining('Eventi del mese'), findsOneWidget);
+    expect(find.textContaining('occorrenze giornaliere'), findsOneWidget);
 
     final today = DateTime.now();
     final todayKey = _calendarDayKey(today);
@@ -67,7 +68,7 @@ void main() {
     expect(find.text('Mostra tutto il mese'), findsOneWidget);
 
     await _expectVisibleByScrolling(tester, find.text('Controllo Milo'));
-    await _expectVisibleByScrolling(tester, find.text('Libretto sanitario'));
+    await _expectVisibleByScrolling(tester, find.text('Antibiotico'));
 
     await tester.scrollUntilVisible(
       find.text('Mostra tutto il mese'),
@@ -96,7 +97,7 @@ Future<void> _expectVisibleByScrolling(
     await tester.pumpAndSettle();
   }
 
-  expect(finder, findsOneWidget);
+  expect(finder, findsAtLeastNWidgets(1));
 }
 
 Future<void> _pumpApp(WidgetTester tester) async {
@@ -263,12 +264,29 @@ void _seedCalendarData() {
         'petName': 'Luna',
         'name': 'Antibiotico',
         'status': 'active',
-        'startDate': baseDate.add(const Duration(hours: 6)).toIso8601String(),
+        'startDate': DateTime(now.year, now.month, now.day)
+            .subtract(const Duration(days: 2))
+            .toIso8601String(),
         'createdAt': now.toIso8601String(),
-        'endDate': null,
+        'endDate': DateTime(now.year, now.month, now.day)
+            .add(const Duration(days: 3))
+            .toIso8601String(),
         'prescribedBy': 'Dott.ssa Bianchi',
         'instructions': 'Secondo prescrizione veterinaria',
         'notes': null,
+        'reminderTimes': [
+          {
+            'id': '12-00',
+            'hour': 12,
+            'minute': 0,
+          },
+          {
+            'id': '20-00',
+            'hour': 20,
+            'minute': 0,
+          }
+        ],
+        'automaticReminderIds': [],
       }
     ]),
     'pet_life_visit_entries_v1': jsonEncode([

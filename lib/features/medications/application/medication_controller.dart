@@ -43,7 +43,7 @@ class MedicationController
   }
 
   List<MedicationEntry> entriesForPet(String petId) {
-    final entries = state.valueOrNull ?? const [];
+    final entries = state.valueOrNull ?? const <MedicationEntry>[];
 
     return entries
         .where((entry) => entry.petId == petId)
@@ -51,19 +51,44 @@ class MedicationController
   }
 
   Future<void> addEntry(MedicationEntry entry) async {
-    final currentEntries = state.valueOrNull ?? const [];
+    await _ensureLoaded();
+
+    final currentEntries = state.valueOrNull ?? const <MedicationEntry>[];
     final updatedEntries = [...currentEntries, entry];
 
     await _saveAndEmit(updatedEntries);
   }
 
+  Future<void> updateEntry(MedicationEntry updatedEntry) async {
+    await _ensureLoaded();
+
+    final currentEntries = state.valueOrNull ?? const <MedicationEntry>[];
+    final updatedEntries = currentEntries.map((entry) {
+      if (entry.id == updatedEntry.id) {
+        return updatedEntry;
+      }
+
+      return entry;
+    }).toList(growable: false);
+
+    await _saveAndEmit(updatedEntries);
+  }
+
   Future<void> deleteEntry(String entryId) async {
-    final currentEntries = state.valueOrNull ?? const [];
+    await _ensureLoaded();
+
+    final currentEntries = state.valueOrNull ?? const <MedicationEntry>[];
     final updatedEntries = currentEntries
         .where((entry) => entry.id != entryId)
         .toList(growable: false);
 
     await _saveAndEmit(updatedEntries);
+  }
+
+  Future<void> _ensureLoaded() async {
+    if (state.isLoading || state.valueOrNull == null) {
+      await loadEntries();
+    }
   }
 
   Future<void> _saveAndEmit(List<MedicationEntry> entries) async {
