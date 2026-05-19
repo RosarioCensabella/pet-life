@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/theme.dart';
 import '../../../generated/l10n/app_localizations.dart';
 import '../../../shared/presentation/pet_life_navigation_bar.dart';
 import '../../documents/application/pet_document_controller.dart';
@@ -56,141 +57,140 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final expensesState = ref.watch(expenseControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.calendarTitle),
-      ),
-      body: petsState.when(
-        loading: () => Center(child: Text(l10n.loadingPets)),
-        error: (error, stackTrace) => _ErrorState(error: error),
-        data: (pets) {
-          final activePets = pets
-              .where((pet) => !pet.isArchived)
-              .toList(growable: false);
-          final visibleRange = _visibleDateRange(_focusedMonth);
+      body: SafeArea(
+        child: petsState.when(
+          loading: () => Center(child: Text(l10n.loadingPets)),
+          error: (error, stackTrace) => _ErrorState(error: error),
+          data: (pets) {
+            final activePets = pets
+                .where((pet) => !pet.isArchived)
+                .toList(growable: false);
+            final visibleRange = _visibleDateRange(_focusedMonth);
 
-          final medicationEntries =
-              medicationsState.valueOrNull ?? const <MedicationEntry>[];
-          final automaticMedicationReminderIds = medicationEntries
-              .expand((entry) => entry.automaticReminderIds)
-              .toSet();
+            final medicationEntries =
+                medicationsState.valueOrNull ?? const <MedicationEntry>[];
+            final automaticMedicationReminderIds = medicationEntries
+                .expand((entry) => entry.automaticReminderIds)
+                .toSet();
 
-          final events = _buildCalendarEvents(
-            strings: strings,
-            activePets: activePets,
-            visibleStartDate: visibleRange.start,
-            visibleEndDate: visibleRange.end,
-            automaticMedicationReminderIds: automaticMedicationReminderIds,
-            reminders: remindersState.valueOrNull ?? const <Reminder>[],
-            documents: documentsState.valueOrNull ?? const <PetDocument>[],
-            weightEntries: weightState.valueOrNull ?? const <WeightEntry>[],
-            healthEntries: healthState.valueOrNull ?? const <HealthEntry>[],
-            foodEntries: foodState.valueOrNull ?? const <FoodEntry>[],
-            medicationEntries: medicationEntries,
-            visitEntries: visitsState.valueOrNull ?? const <VisitEntry>[],
-            expenseEntries: expensesState.valueOrNull ?? const <ExpenseEntry>[],
-          );
+            final events = _buildCalendarEvents(
+              strings: strings,
+              activePets: activePets,
+              visibleStartDate: visibleRange.start,
+              visibleEndDate: visibleRange.end,
+              automaticMedicationReminderIds: automaticMedicationReminderIds,
+              reminders: remindersState.valueOrNull ?? const <Reminder>[],
+              documents: documentsState.valueOrNull ?? const <PetDocument>[],
+              weightEntries: weightState.valueOrNull ?? const <WeightEntry>[],
+              healthEntries: healthState.valueOrNull ?? const <HealthEntry>[],
+              foodEntries: foodState.valueOrNull ?? const <FoodEntry>[],
+              medicationEntries: medicationEntries,
+              visitEntries: visitsState.valueOrNull ?? const <VisitEntry>[],
+              expenseEntries:
+                  expensesState.valueOrNull ?? const <ExpenseEntry>[],
+            );
 
-          final filteredEvents = _filterEventsByPet(events);
-          final eventsByDay = _eventsByDay(filteredEvents);
-          final monthEvents = _eventsForMonth(filteredEvents, _focusedMonth);
-          final visibleEvents = _selectedDate == null
-              ? monthEvents
-              : _eventsForDay(filteredEvents, _selectedDate!);
+            final filteredEvents = _filterEventsByPet(events);
+            final eventsByDay = _eventsByDay(filteredEvents);
+            final monthEvents = _eventsForMonth(filteredEvents, _focusedMonth);
+            final visibleEvents = _selectedDate == null
+                ? monthEvents
+                : _eventsForDay(filteredEvents, _selectedDate!);
 
-          return ListView(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            children: [
-              _PetFilterCard(
-                l10n: l10n,
-                activePets: activePets,
-                selectedPetId: _selectedPetId,
-                allPetsFilterValue: _allPetsFilterValue,
-                onChanged: (value) {
-                  if (value == null) {
-                    return;
-                  }
-
-                  setState(() {
-                    _selectedPetId = value;
-                    _selectedDate = null;
-                  });
-                },
-              ),
-              _CalendarLegendCard(strings: strings),
-              _CalendarMonthCard(
-                focusedMonth: _focusedMonth,
-                selectedDate: _selectedDate,
-                eventsByDay: eventsByDay,
-                strings: strings,
-                onPreviousMonth: () {
-                  setState(() {
-                    _focusedMonth = DateTime(
-                      _focusedMonth.year,
-                      _focusedMonth.month - 1,
-                    );
-                    _selectedDate = null;
-                  });
-                },
-                onNextMonth: () {
-                  setState(() {
-                    _focusedMonth = DateTime(
-                      _focusedMonth.year,
-                      _focusedMonth.month + 1,
-                    );
-                    _selectedDate = null;
-                  });
-                },
-                onDateSelected: (date) {
-                  setState(() {
-                    _selectedDate = _dateOnly(date);
-                    _focusedMonth = DateTime(date.year, date.month);
-                  });
-                },
-              ),
-              if (_hasAnyLoadingState(
-                remindersState,
-                documentsState,
-                weightState,
-                healthState,
-                foodState,
-                medicationsState,
-                visitsState,
-                expensesState,
-              ))
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+              children: [
+                _CalendarHeroHeader(
+                  title: l10n.calendarTitle,
+                  subtitle: strings.heroSubtitle,
+                  visibleEventsCount: monthEvents.length,
                 ),
-              _CalendarListHeader(
-                strings: strings,
-                selectedDate: _selectedDate,
-                focusedMonth: _focusedMonth,
-                eventCount: visibleEvents.length,
-                onClearSelectedDate: _selectedDate == null
-                    ? null
-                    : () {
-                        setState(() {
-                          _selectedDate = null;
-                        });
-                      },
-              ),
-              if (visibleEvents.isEmpty)
-                _EmptyCalendarCard(
-                  title: l10n.calendarEmptyTitle,
-                  description: l10n.calendarEmptyDescription,
-                )
-              else
-                ...visibleEvents.map(
-                  (event) => _CalendarEventCard(
-                    event: event,
-                    onTap: () => context.push(event.route),
-                  ),
+                const SizedBox(height: 16),
+                _PetFilterCard(
+                  l10n: l10n,
+                  activePets: activePets,
+                  selectedPetId: _selectedPetId,
+                  allPetsFilterValue: _allPetsFilterValue,
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedPetId = value;
+                      _selectedDate = null;
+                    });
+                  },
                 ),
-            ],
-          );
-        },
+                const SizedBox(height: 12),
+                _CalendarMonthCard(
+                  focusedMonth: _focusedMonth,
+                  selectedDate: _selectedDate,
+                  eventsByDay: eventsByDay,
+                  strings: strings,
+                  onPreviousMonth: () {
+                    setState(() {
+                      _focusedMonth = DateTime(
+                        _focusedMonth.year,
+                        _focusedMonth.month - 1,
+                      );
+                      _selectedDate = null;
+                    });
+                  },
+                  onNextMonth: () {
+                    setState(() {
+                      _focusedMonth = DateTime(
+                        _focusedMonth.year,
+                        _focusedMonth.month + 1,
+                      );
+                      _selectedDate = null;
+                    });
+                  },
+                  onDateSelected: (date) {
+                    setState(() {
+                      _selectedDate = _dateOnly(date);
+                      _focusedMonth = DateTime(date.year, date.month);
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                _CalendarLegendCard(strings: strings),
+                if (_hasAnyLoadingState(
+                  remindersState,
+                  documentsState,
+                  weightState,
+                  healthState,
+                  foodState,
+                  medicationsState,
+                  visitsState,
+                  expensesState,
+                ))
+                  const _CalendarLoadingCard(),
+                _CalendarListHeader(
+                  strings: strings,
+                  selectedDate: _selectedDate,
+                  focusedMonth: _focusedMonth,
+                  eventCount: visibleEvents.length,
+                  onClearSelectedDate: _selectedDate == null
+                      ? null
+                      : () {
+                          setState(() {
+                            _selectedDate = null;
+                          });
+                        },
+                ),
+                if (visibleEvents.isEmpty)
+                  _EmptyCalendarCard(
+                    title: l10n.calendarEmptyTitle,
+                    description: l10n.calendarEmptyDescription,
+                  )
+                else
+                  ...visibleEvents.map(
+                    (event) => _CalendarEventCard(
+                      event: event,
+                      onTap: () => context.push(event.route),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
       ),
       bottomNavigationBar: const PetLifeNavigationBar(
         selectedDestination: PetLifeDestination.calendar,
@@ -393,9 +393,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           route: isSymptom
               ? '/pets/${pet.id}/symptoms'
               : '/pets/${pet.id}/health-diary',
-          icon: isSymptom ? Icons.visibility_outlined : Icons.edit_note_outlined,
-          kind:
-              isSymptom ? _CalendarEventKind.symptom : _CalendarEventKind.diary,
+          icon: isSymptom
+              ? Icons.visibility_outlined
+              : Icons.edit_note_outlined,
+          kind: isSymptom
+              ? _CalendarEventKind.symptom
+              : _CalendarEventKind.diary,
         ),
       );
     }
@@ -577,6 +580,102 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   }
 }
 
+class _CalendarHeroHeader extends StatelessWidget {
+  const _CalendarHeroHeader({
+    required this.title,
+    required this.subtitle,
+    required this.visibleEventsCount,
+  });
+
+  final String title;
+  final String subtitle;
+  final int visibleEventsCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = _CalendarStrings.of(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: PetLifeDesign.warmSurface,
+        borderRadius: BorderRadius.circular(PetLifeDesign.radiusExtraLarge),
+        border: Border.all(color: PetLifeDesign.outline),
+        boxShadow: [PetLifeDesign.subtleShadow],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+        child: Row(
+          children: [
+            Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                color: PetLifeDesign.primaryBrown,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(
+                Icons.calendar_month_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.8,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: PetLifeDesign.softSurface,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      visibleEventsCount.toString(),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                          ),
+                    ),
+                    Text(
+                      strings.eventsShort,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: PetLifeDesign.secondaryBrown,
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _PetFilterCard extends StatelessWidget {
   const _PetFilterCard({
     required this.l10n,
@@ -590,43 +689,101 @@ class _PetFilterCard extends StatelessWidget {
   final List<Pet> activePets;
   final String selectedPetId;
   final String allPetsFilterValue;
-  final ValueChanged<String?> onChanged;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: DropdownButtonFormField<String>(
-          initialValue: selectedPetId,
-          decoration: InputDecoration(
-            labelText: l10n.filterByPet,
-            border: const OutlineInputBorder(),
+    return SizedBox(
+      height: 44,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          _FilterChipPill(
+            label: l10n.allPets,
+            selected: selectedPetId == allPetsFilterValue,
+            color: PetLifeDesign.primaryBrown,
+            onTap: () => onChanged(allPetsFilterValue),
           ),
-          items: [
-            DropdownMenuItem(
-              value: allPetsFilterValue,
-              child: Text(l10n.allPets),
-            ),
-            ...activePets.map(
-              (pet) => DropdownMenuItem(
-                value: pet.id,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.circle,
-                      size: 12,
-                      color: Color(pet.colorValue),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(pet.name),
-                  ],
-                ),
+          const SizedBox(width: 8),
+          ...activePets.map(
+            (pet) => Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _FilterChipPill(
+                label: pet.name,
+                selected: selectedPetId == pet.id,
+                color: Color(pet.colorValue),
+                onTap: () => onChanged(pet.id),
               ),
             ),
-          ],
-          onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterChipPill extends StatelessWidget {
+  const _FilterChipPill({
+    required this.label,
+    required this.selected,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final foregroundColor = selected ? Colors.white : PetLifeDesign.primaryBrown;
+    final backgroundColor = selected ? color : PetLifeDesign.warmSurface;
+
+    return Material(
+      color: backgroundColor,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Container(
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected ? color : PetLifeDesign.outline,
+            ),
+            boxShadow: selected ? [PetLifeDesign.subtleShadow] : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!selected)
+                Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                )
+              else
+                const Icon(
+                  Icons.check_rounded,
+                  size: 16,
+                  color: Colors.white,
+                ),
+              const SizedBox(width: 7),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: foregroundColor,
+                      fontWeight: FontWeight.w900,
+                    ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -642,19 +799,32 @@ class _CalendarLegendCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4E8),
+        borderRadius: BorderRadius.circular(PetLifeDesign.radiusLarge),
+        border: Border.all(
+          color: const Color(0xFFF0D6BF),
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.info_outline,
-              color: Theme.of(context).colorScheme.primary,
+            const Icon(
+              Icons.info_outline_rounded,
+              color: Color(0xFFB87841),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(strings.legend),
+              child: Text(
+                strings.legend,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF7B5537),
+                      height: 1.35,
+                    ),
+              ),
             ),
           ],
         ),
@@ -689,35 +859,55 @@ class _CalendarMonthCard extends StatelessWidget {
     final weekdayLabels = _weekdayLabels(locale);
     final dates = _visibleDates(focusedMonth);
 
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        color: PetLifeDesign.warmSurface,
+        borderRadius: BorderRadius.circular(PetLifeDesign.radiusExtraLarge),
+        border: Border.all(color: PetLifeDesign.outline),
+        boxShadow: [PetLifeDesign.softShadow],
+      ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
         child: Column(
           children: [
             Row(
               children: [
-                IconButton(
+                _MonthButton(
                   tooltip: strings.previousMonth,
+                  icon: Icons.chevron_left_rounded,
                   onPressed: onPreviousMonth,
-                  icon: const Icon(Icons.chevron_left),
                 ),
                 Expanded(
-                  child: Text(
-                    monthLabel,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
+                  child: Column(
+                    children: [
+                      Text(
+                        monthLabel,
+                        textAlign: TextAlign.center,
+                        style:
+                            Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.6,
+                                ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        strings.tapDayHint,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: PetLifeDesign.mutedText,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                    ],
                   ),
                 ),
-                IconButton(
+                _MonthButton(
                   tooltip: strings.nextMonth,
+                  icon: Icons.chevron_right_rounded,
                   onPressed: onNextMonth,
-                  icon: const Icon(Icons.chevron_right),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             GridView.count(
               crossAxisCount: 7,
               shrinkWrap: true,
@@ -727,18 +917,23 @@ class _CalendarMonthCard extends StatelessWidget {
                   .map(
                     (label) => Center(
                       child: Text(
-                        label,
-                        style: Theme.of(context).textTheme.labelMedium,
+                        label.toUpperCase(),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: PetLifeDesign.mutedText,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.4,
+                            ),
                       ),
                     ),
                   )
                   .toList(growable: false),
             ),
+            const SizedBox(height: 4),
             GridView.count(
               crossAxisCount: 7,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              childAspectRatio: 1.08,
+              childAspectRatio: 1.02,
               children: dates.map((date) {
                 final day = _dateOnly(date);
                 final dayEvents = eventsByDay[day] ?? const <_CalendarEvent>[];
@@ -784,6 +979,32 @@ class _CalendarMonthCard extends StatelessWidget {
   }
 }
 
+class _MonthButton extends StatelessWidget {
+  const _MonthButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: PetLifeDesign.softSurface,
+      shape: const CircleBorder(),
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        icon: Icon(icon),
+        color: PetLifeDesign.primaryBrown,
+      ),
+    );
+  }
+}
+
 class _CalendarDayCell extends StatelessWidget {
   const _CalendarDayCell({
     required this.date,
@@ -805,6 +1026,7 @@ class _CalendarDayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final petColorValues = _petColorValues(dayEvents);
+    final hasEvents = dayEvents.isNotEmpty;
 
     return InkWell(
       borderRadius: BorderRadius.circular(999),
@@ -814,7 +1036,7 @@ class _CalendarDayCell extends StatelessWidget {
           painter: _DayPetRingPainter(
             petColorValues: petColorValues,
             isSelected: isSelected,
-            selectedColor: Theme.of(context).colorScheme.primary,
+            selectedColor: PetLifeDesign.primaryBrown,
           ),
           child: Container(
             width: 42,
@@ -822,27 +1044,26 @@ class _CalendarDayCell extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: isSelected
-                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.10)
+                  ? PetLifeDesign.primaryBrown.withValues(alpha: 0.09)
                   : isToday
-                      ? Theme.of(context)
-                          .colorScheme
-                          .secondaryContainer
-                          .withValues(alpha: 0.55)
+                      ? PetLifeDesign.softSurface
                       : Colors.transparent,
               shape: BoxShape.circle,
+              border: !hasEvents && isToday
+                  ? Border.all(
+                      color: PetLifeDesign.outline,
+                    )
+                  : null,
             ),
             child: Text(
               date.day.toString(),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: isSelected || isToday
+                    fontWeight: isSelected || isToday || hasEvents
                         ? FontWeight.w900
-                        : FontWeight.w600,
+                        : FontWeight.w700,
                     color: isCurrentMonth
-                        ? Theme.of(context).colorScheme.onSurface
-                        : Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.34),
+                        ? PetLifeDesign.primaryBrown
+                        : PetLifeDesign.mutedText.withValues(alpha: 0.55),
                   ),
             ),
           ),
@@ -965,7 +1186,7 @@ class _CalendarListHeader extends StatelessWidget {
         : '${strings.dayEvents}: ${DateFormat.yMMMd(locale).format(selectedDate!)}';
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+      padding: const EdgeInsets.fromLTRB(4, 18, 4, 8),
       child: Row(
         children: [
           Expanded(
@@ -973,6 +1194,7 @@ class _CalendarListHeader extends StatelessWidget {
               '$title · $eventCount',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w900,
+                    letterSpacing: -0.2,
                   ),
             ),
           ),
@@ -999,36 +1221,47 @@ class _CalendarEventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateLabel = _formatDate(context, event.date);
+    final petColor = Color(event.petColorValue);
 
-    return Card(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: PetLifeDesign.warmSurface,
+        borderRadius: BorderRadius.circular(PetLifeDesign.radiusLarge),
+        border: Border.all(color: PetLifeDesign.outline),
+        boxShadow: [PetLifeDesign.subtleShadow],
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(PetLifeDesign.radiusLarge),
         onTap: onTap,
         child: IntrinsicHeight(
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                width: 8,
+                width: 6,
                 decoration: BoxDecoration(
-                  color: Color(event.petColorValue),
+                  color: petColor,
                   borderRadius: const BorderRadius.horizontal(
-                    left: Radius.circular(20),
+                    left: Radius.circular(PetLifeDesign.radiusLarge),
                   ),
                 ),
               ),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        backgroundColor:
-                            Color(event.petColorValue).withValues(alpha: 0.16),
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: petColor.withValues(alpha: 0.13),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         child: Icon(
                           event.icon,
-                          color: Color(event.petColorValue),
+                          color: petColor,
+                          size: 22,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1038,32 +1271,47 @@ class _CalendarEventCard extends StatelessWidget {
                           children: [
                             Text(
                               event.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: Theme.of(context)
                                   .textTheme
-                                  .titleMedium
+                                  .titleSmall
                                   ?.copyWith(
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w900,
                                   ),
                             ),
-                            const SizedBox(height: 6),
-                            Text(event.petName),
-                            Text(event.subtitle),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 3),
                             Text(
-                              dateLabel,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelLarge
-                                  ?.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                  ),
+                              event.subtitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: [
+                                _EventPill(
+                                  color: petColor,
+                                  icon: Icons.pets_outlined,
+                                  label: event.petName,
+                                ),
+                                _EventPill(
+                                  color: PetLifeDesign.secondaryBrown,
+                                  icon: Icons.schedule_outlined,
+                                  label: dateLabel,
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Icon(Icons.chevron_right),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: PetLifeDesign.mutedText,
+                      ),
                     ],
                   ),
                 ),
@@ -1077,9 +1325,72 @@ class _CalendarEventCard extends StatelessWidget {
 
   String _formatDate(BuildContext context, DateTime date) {
     final locale = Localizations.localeOf(context).toLanguageTag();
-    final dateFormat = DateFormat.yMMMd(locale).add_Hm();
+    final dateFormat = DateFormat.MMMd(locale).add_Hm();
 
     return dateFormat.format(date);
+  }
+}
+
+class _EventPill extends StatelessWidget {
+  const _EventPill({
+    required this.color,
+    required this.icon,
+    required this.label,
+  });
+
+  final Color color;
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 13,
+              color: color,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w900,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CalendarLoadingCard extends StatelessWidget {
+  const _CalendarLoadingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      decoration: BoxDecoration(
+        color: PetLifeDesign.warmSurface,
+        borderRadius: BorderRadius.circular(PetLifeDesign.radiusLarge),
+        border: Border.all(color: PetLifeDesign.outline),
+      ),
+      child: const Padding(
+        padding: EdgeInsets.all(20),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+    );
   }
 }
 
@@ -1094,28 +1405,43 @@ class _EmptyCalendarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        color: PetLifeDesign.warmSurface,
+        borderRadius: BorderRadius.circular(PetLifeDesign.radiusExtraLarge),
+        border: Border.all(color: PetLifeDesign.outline),
+        boxShadow: [PetLifeDesign.subtleShadow],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(22),
         child: Column(
           children: [
-            Icon(
-              Icons.calendar_month_outlined,
-              size: 48,
-              color: Theme.of(context).colorScheme.primary,
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: PetLifeDesign.softSurface,
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: const Icon(
+                Icons.calendar_month_outlined,
+                size: 34,
+                color: PetLifeDesign.secondaryBrown,
+              ),
             ),
             const SizedBox(height: 16),
             Text(
               title,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w900,
                   ),
             ),
             const SizedBox(height: 8),
             Text(
               description,
               textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
         ),
@@ -1195,6 +1521,9 @@ class _DateRange {
 
 class _CalendarStrings {
   const _CalendarStrings({
+    required this.heroSubtitle,
+    required this.eventsShort,
+    required this.tapDayHint,
     required this.legend,
     required this.previousMonth,
     required this.nextMonth,
@@ -1246,6 +1575,9 @@ class _CalendarStrings {
     required this.accessories,
   });
 
+  final String heroSubtitle;
+  final String eventsShort;
+  final String tapDayHint;
   final String legend;
   final String previousMonth;
   final String nextMonth;
@@ -1385,6 +1717,9 @@ class _CalendarStrings {
 
     if (languageCode == 'en') {
       return const _CalendarStrings(
+        heroSubtitle: 'A calm view of your pet life.',
+        eventsShort: 'events',
+        tapDayHint: 'Tap a day to review it',
         legend:
             'Calendar days are marked with pet colors. If multiple pets have items on the same day, the circle is split into colored segments. Medication therapies are shown as daily reminder occurrences. This is an organizational view only and does not provide diagnosis, triage or medical advice.',
         previousMonth: 'Previous month',
@@ -1439,6 +1774,9 @@ class _CalendarStrings {
     }
 
     return const _CalendarStrings(
+      heroSubtitle: 'Una vista serena della vita del tuo pet.',
+      eventsShort: 'eventi',
+      tapDayHint: 'Tocca un giorno per rivederlo',
       legend:
           'I giorni del calendario sono marcati con i colori dei pet. Se più animali hanno elementi nello stesso giorno, il cerchio viene diviso in segmenti colorati. Le terapie farmacologiche sono mostrate come occorrenze giornaliere dei promemoria. Questa vista è solo organizzativa e non fornisce diagnosi, triage o consigli medici.',
       previousMonth: 'Mese precedente',
