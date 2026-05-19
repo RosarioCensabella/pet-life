@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme.dart';
+
 class PetModuleGrid extends StatelessWidget {
   const PetModuleGrid({
     required this.title,
@@ -16,23 +18,29 @@ class PetModuleGrid extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return Card(
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: PetLifeDesign.warmSurface,
+        borderRadius: BorderRadius.circular(PetLifeDesign.radiusExtraLarge),
+        border: Border.all(color: PetLifeDesign.outline),
+        boxShadow: [PetLifeDesign.subtleShadow],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
                   ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             LayoutBuilder(
               builder: (context, constraints) {
-                final isWide = constraints.maxWidth >= 520;
-                final columns = isWide ? 2 : 1;
+                final columns = constraints.maxWidth >= 360 ? 3 : 2;
 
                 return GridView.builder(
                   itemCount: modules.length,
@@ -40,9 +48,9 @@ class PetModuleGrid extends StatelessWidget {
                   physics: const NeverScrollableScrollPhysics(),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: columns,
-                    mainAxisExtent: 104,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
+                    mainAxisExtent: 92,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
                   ),
                   itemBuilder: (context, index) {
                     final module = modules[index];
@@ -85,54 +93,65 @@ class _PetModuleTile extends StatelessWidget {
     return Semantics(
       button: true,
       label: module.title,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: module.onTap,
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outlineVariant,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor:
-                      Theme.of(context).colorScheme.primaryContainer,
-                  child: Icon(
-                    module.icon,
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                  ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(PetLifeDesign.radiusMedium),
+          onTap: module.onTap,
+          child: Ink(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.62),
+              borderRadius: BorderRadius.circular(PetLifeDesign.radiusMedium),
+              border: Border.all(
+                color: PetLifeDesign.outline,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: PetLifeDesign.primaryBrown.withValues(alpha: 0.035),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        module.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        module.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right),
               ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: PetLifeDesign.infoLilac,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      module.icon,
+                      size: 17,
+                      color: const Color(0xFF9C6ADE),
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    module.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: PetLifeDesign.primaryBrown,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    module.description,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: PetLifeDesign.mutedText,
+                        ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
