@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../generated/l10n/app_localizations.dart';
 import '../application/pet_controller.dart';
+import '../application/profile_photo/pet_profile_photo_file_service_provider.dart';
 import '../domain/pet.dart';
 
 class EditPetScreen extends ConsumerStatefulWidget {
@@ -28,8 +31,11 @@ class _EditPetScreenState extends ConsumerState<EditPetScreen> {
 
   PetSpecies _species = PetSpecies.dog;
   PetSex _sex = PetSex.unknown;
+  int _selectedColorValue = Pet.defaultColorValue;
+  String? _profileImagePath;
   String? _initializedPetId;
   bool _isSaving = false;
+  bool _isPickingPhoto = false;
 
   @override
   void dispose() {
@@ -54,6 +60,55 @@ class _EditPetScreenState extends ConsumerState<EditPetScreen> {
     _vetNameController.text = pet.vetName ?? '';
     _species = pet.species;
     _sex = pet.sex;
+    _profileImagePath = pet.profileImagePath;
+    _selectedColorValue = pet.colorValue;
+  }
+
+  Future<void> _pickProfilePhoto(Pet pet) async {
+    final strings = _PetVisualIdentityStrings.of(context);
+
+    setState(() {
+      _isPickingPhoto = true;
+    });
+
+    try {
+      final fileService = ref.read(petProfilePhotoFileServiceProvider);
+      final pickedPhoto = await fileService.pickAndCopyProfilePhoto(
+        petId: pet.id,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      if (pickedPhoto == null) {
+        return;
+      }
+
+      setState(() {
+        _profileImagePath = pickedPhoto.localPath;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.photoPickError)),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPickingPhoto = false;
+        });
+      }
+    }
+  }
+
+  void _removeProfilePhoto() {
+    setState(() {
+      _profileImagePath = null;
+    });
   }
 
   Future<void> _savePet(Pet originalPet) async {
@@ -79,9 +134,12 @@ class _EditPetScreenState extends ConsumerState<EditPetScreen> {
       sex: _sex,
       microchip: microchip,
       vetName: vetName,
+      profileImagePath: _profileImagePath,
+      colorValue: _selectedColorValue,
       clearBreed: breed == null,
       clearMicrochip: microchip == null,
       clearVetName: vetName == null,
+      clearProfileImagePath: _profileImagePath == null,
     );
 
     await ref.read(petControllerProvider.notifier).updatePet(updatedPet);
@@ -110,6 +168,7 @@ class _EditPetScreenState extends ConsumerState<EditPetScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final strings = _PetVisualIdentityStrings.of(context);
     final petsState = ref.watch(petControllerProvider);
 
     return petsState.when(
@@ -168,6 +227,27 @@ class _EditPetScreenState extends ConsumerState<EditPetScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(24),
                 children: [
+                  _PetAvatarEditor(
+                    imagePath: _profileImagePath,
+                    colorValue: _selectedColorValue,
+                    addPhotoLabel: strings.addPhoto,
+                    changePhotoLabel: strings.changePhoto,
+                    removePhotoLabel: strings.removePhoto,
+                    isPickingPhoto: _isPickingPhoto,
+                    onPickPhoto: () => _pickProfilePhoto(pet),
+                    onRemovePhoto: _removeProfilePhoto,
+                  ),
+                  const SizedBox(height: 24),
+                  _PetColorPicker(
+                    title: strings.petColor,
+                    selectedColorValue: _selectedColorValue,
+                    onColorSelected: (colorValue) {
+                      setState(() {
+                        _selectedColorValue = colorValue;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 24),
                   TextFormField(
                     controller: _nameController,
                     textInputAction: TextInputAction.next,
@@ -328,5 +408,196 @@ class _EditPetScreenState extends ConsumerState<EditPetScreen> {
     }
 
     return null;
+  }
+}
+
+class _PetAvatarEditor extends StatelessWidget {
+  const _PetAvatarEditor({
+    required this.imagePath,
+    required this.colorValue,
+    required this.addPhotoLabel,
+    required this.changePhotoLabel,
+    required this.removePhotoLabel,
+    required this.isPickingPhoto,
+    required this.onPickPhoto,
+    required this.onRemovePhoto,
+  });
+
+  final String? imagePath;
+  final int colorValue;
+  final String addPhotoLabel;
+  final String changePhotoLabel;
+  final String removePhotoLabel;
+  final bool isPickingPhoto;
+  final VoidCallback onPickPhoto;
+  final VoidCallback onRemovePhoto;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageProvider = _imageProviderForPath(imagePath);
+    final hasPhoto = imageProvider != null;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            CircleAvatar(
+              radius: 48,
+              backgroundColor: Color(colorValue),
+              backgroundImage: imageProvider,
+              child: hasPhoto
+                  ? null
+                  : const Icon(
+                      Icons.pets,
+                      color: Colors.white,
+                      size: 44,
+                    ),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: isPickingPhoto ? null : onPickPhoto,
+                  icon: isPickingPhoto
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.photo_camera_outlined),
+                  label: Text(hasPhoto ? changePhotoLabel : addPhotoLabel),
+                ),
+                if (hasPhoto)
+                  TextButton.icon(
+                    onPressed: onRemovePhoto,
+                    icon: const Icon(Icons.close_outlined),
+                    label: Text(removePhotoLabel),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  ImageProvider<Object>? _imageProviderForPath(String? path) {
+    if (path == null || path.trim().isEmpty) {
+      return null;
+    }
+
+    final file = File(path);
+
+    if (!file.existsSync()) {
+      return null;
+    }
+
+    return FileImage(file);
+  }
+}
+
+class _PetColorPicker extends StatelessWidget {
+  const _PetColorPicker({
+    required this.title,
+    required this.selectedColorValue,
+    required this.onColorSelected,
+  });
+
+  final String title;
+  final int selectedColorValue;
+  final ValueChanged<int> onColorSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: Pet.colorPalette.map((colorValue) {
+                final isSelected = colorValue == selectedColorValue;
+
+                return InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: () => onColorSelected(colorValue),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Color(colorValue),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.onSurface
+                            : Colors.transparent,
+                        width: 3,
+                      ),
+                    ),
+                    child: isSelected
+                        ? const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                          )
+                        : null,
+                  ),
+                );
+              }).toList(growable: false),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PetVisualIdentityStrings {
+  const _PetVisualIdentityStrings({
+    required this.addPhoto,
+    required this.changePhoto,
+    required this.removePhoto,
+    required this.petColor,
+    required this.photoPickError,
+  });
+
+  final String addPhoto;
+  final String changePhoto;
+  final String removePhoto;
+  final String petColor;
+  final String photoPickError;
+
+  static _PetVisualIdentityStrings of(BuildContext context) {
+    final languageCode = Localizations.localeOf(context).languageCode;
+
+    if (languageCode == 'en') {
+      return const _PetVisualIdentityStrings(
+        addPhoto: 'Add photo',
+        changePhoto: 'Change photo',
+        removePhoto: 'Remove photo',
+        petColor: 'Pet color',
+        photoPickError: 'Unable to select the photo.',
+      );
+    }
+
+    return const _PetVisualIdentityStrings(
+      addPhoto: 'Aggiungi foto',
+      changePhoto: 'Cambia foto',
+      removePhoto: 'Rimuovi foto',
+      petColor: 'Colore del pet',
+      photoPickError: 'Impossibile selezionare la foto.',
+    );
   }
 }

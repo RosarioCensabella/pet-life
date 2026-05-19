@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -246,7 +248,6 @@ class PetDashboardScreen extends ConsumerWidget {
       );
     }
 
-
     if (featureFlags.reportsModuleEnabled) {
       modules.add(
         PetModuleItem(
@@ -261,9 +262,6 @@ class PetDashboardScreen extends ConsumerWidget {
         ),
       );
     }
-
-
-
 
     return modules;
   }
@@ -406,14 +404,10 @@ class _PetHeaderCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
+            _PetAvatar(
+              imagePath: pet.profileImagePath,
+              colorValue: pet.colorValue,
               radius: 36,
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              child: Icon(
-                Icons.pets,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-                size: 36,
-              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -433,8 +427,17 @@ class _PetHeaderCard extends StatelessWidget {
                   if (pet.microchip != null) Text(pet.microchip!),
                   if (pet.vetName != null) Text(pet.vetName!),
                   const SizedBox(height: 12),
-                  Chip(
-                    label: Text(statusLabel),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      Chip(
+                        avatar: CircleAvatar(
+                          backgroundColor: Color(pet.colorValue),
+                        ),
+                        label: Text(statusLabel),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -443,6 +446,51 @@ class _PetHeaderCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _PetAvatar extends StatelessWidget {
+  const _PetAvatar({
+    required this.imagePath,
+    required this.colorValue,
+    required this.radius,
+  });
+
+  final String? imagePath;
+  final int colorValue;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageProvider = _imageProviderForPath(imagePath);
+    final hasPhoto = imageProvider != null;
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: Color(colorValue),
+      backgroundImage: imageProvider,
+      child: hasPhoto
+          ? null
+          : Icon(
+              Icons.pets,
+              color: Colors.white,
+              size: radius,
+            ),
+    );
+  }
+
+  ImageProvider<Object>? _imageProviderForPath(String? path) {
+    if (path == null || path.trim().isEmpty) {
+      return null;
+    }
+
+    final file = File(path);
+
+    if (!file.existsSync()) {
+      return null;
+    }
+
+    return FileImage(file);
   }
 }
 

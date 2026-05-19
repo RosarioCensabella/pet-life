@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -136,9 +138,10 @@ class _UpcomingRemindersSection extends StatelessWidget {
                     Expanded(
                       child: Text(
                         l10n.upcomingRemindersTitle,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
                       ),
                     ),
                     TextButton(
@@ -152,11 +155,16 @@ class _UpcomingRemindersSection extends StatelessWidget {
                   Text(l10n.noUpcomingReminders)
                 else
                   ...upcomingReminders.map(
-                    (reminder) => _UpcomingReminderTile(
-                      title: reminder.title,
-                      petName: reminder.petName,
-                      dateLabel: _formatDate(context, reminder.scheduledAt),
-                    ),
+                    (reminder) {
+                      final pet = _findPet(activePets, reminder.petId);
+
+                      return _UpcomingReminderTile(
+                        title: reminder.title,
+                        petName: reminder.petName,
+                        dateLabel: _formatDate(context, reminder.scheduledAt),
+                        petColorValue: pet?.colorValue ?? Pet.defaultColorValue,
+                      );
+                    },
                   ),
               ],
             ),
@@ -187,6 +195,16 @@ class _UpcomingRemindersSection extends StatelessWidget {
     return upcoming.take(HomeScreen._maxUpcomingReminders).toList();
   }
 
+  Pet? _findPet(List<Pet> pets, String petId) {
+    for (final pet in pets) {
+      if (pet.id == petId) {
+        return pet;
+      }
+    }
+
+    return null;
+  }
+
   String _formatDate(BuildContext context, DateTime date) {
     final locale = Localizations.localeOf(context).toLanguageTag();
     final dateFormat = DateFormat.yMMMd(locale).add_Hm();
@@ -200,11 +218,13 @@ class _UpcomingReminderTile extends StatelessWidget {
     required this.title,
     required this.petName,
     required this.dateLabel,
+    required this.petColorValue,
   });
 
   final String title;
   final String petName;
   final String dateLabel;
+  final int petColorValue;
 
   @override
   Widget build(BuildContext context) {
@@ -213,8 +233,12 @@ class _UpcomingReminderTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.chevron_right),
-          const SizedBox(width: 4),
+          Icon(
+            Icons.circle,
+            size: 12,
+            color: Color(petColorValue),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,14 +287,10 @@ class _PetCard extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              CircleAvatar(
+              _PetAvatar(
+                imagePath: pet.profileImagePath,
+                colorValue: pet.colorValue,
                 radius: 32,
-                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                child: Icon(
-                  Icons.pets,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                  size: 32,
-                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -291,11 +311,25 @@ class _PetCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      openLabel,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
+                    Row(
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: Color(pet.colorValue),
+                            shape: BoxShape.circle,
                           ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          openLabel,
+                          style:
+                              Theme.of(context).textTheme.labelLarge?.copyWith(
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -306,6 +340,51 @@ class _PetCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _PetAvatar extends StatelessWidget {
+  const _PetAvatar({
+    required this.imagePath,
+    required this.colorValue,
+    required this.radius,
+  });
+
+  final String? imagePath;
+  final int colorValue;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageProvider = _imageProviderForPath(imagePath);
+    final hasPhoto = imageProvider != null;
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: Color(colorValue),
+      backgroundImage: imageProvider,
+      child: hasPhoto
+          ? null
+          : Icon(
+              Icons.pets,
+              color: Colors.white,
+              size: radius,
+            ),
+    );
+  }
+
+  ImageProvider<Object>? _imageProviderForPath(String? path) {
+    if (path == null || path.trim().isEmpty) {
+      return null;
+    }
+
+    final file = File(path);
+
+    if (!file.existsSync()) {
+      return null;
+    }
+
+    return FileImage(file);
   }
 }
 

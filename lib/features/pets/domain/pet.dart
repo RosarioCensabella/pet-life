@@ -21,8 +21,23 @@ class Pet {
     this.sex = PetSex.unknown,
     this.microchip,
     this.vetName,
+    this.profileImagePath,
+    this.colorValue = defaultColorValue,
     this.archivedAt,
   });
+
+  static const defaultColorValue = 0xFF6C8EF5;
+
+  static const colorPalette = <int>[
+    0xFF6C8EF5,
+    0xFF20B486,
+    0xFFF59E0B,
+    0xFFEF4444,
+    0xFF8B5CF6,
+    0xFFEC4899,
+    0xFF14B8A6,
+    0xFF64748B,
+  ];
 
   final String id;
   final String name;
@@ -33,9 +48,24 @@ class Pet {
   final PetSex sex;
   final String? microchip;
   final String? vetName;
+  final String? profileImagePath;
+  final int colorValue;
   final DateTime? archivedAt;
 
   bool get isArchived => archivedAt != null;
+
+  static int defaultColorValueForSeed(String seed) {
+    if (seed.isEmpty) {
+      return defaultColorValue;
+    }
+
+    final hash = seed.codeUnits.fold<int>(
+      0,
+      (previousValue, codeUnit) => previousValue + codeUnit,
+    );
+
+    return colorPalette[hash % colorPalette.length];
+  }
 
   Pet copyWith({
     String? id,
@@ -47,10 +77,13 @@ class Pet {
     PetSex? sex,
     String? microchip,
     String? vetName,
+    String? profileImagePath,
+    int? colorValue,
     DateTime? archivedAt,
     bool clearBreed = false,
     bool clearMicrochip = false,
     bool clearVetName = false,
+    bool clearProfileImagePath = false,
   }) {
     return Pet(
       id: id ?? this.id,
@@ -62,6 +95,10 @@ class Pet {
       sex: sex ?? this.sex,
       microchip: clearMicrochip ? null : microchip ?? this.microchip,
       vetName: clearVetName ? null : vetName ?? this.vetName,
+      profileImagePath: clearProfileImagePath
+          ? null
+          : profileImagePath ?? this.profileImagePath,
+      colorValue: colorValue ?? this.colorValue,
       archivedAt: archivedAt ?? this.archivedAt,
     );
   }
@@ -77,23 +114,30 @@ class Pet {
       'sex': sex.name,
       'microchip': microchip,
       'vetName': vetName,
+      'profileImagePath': profileImagePath,
+      'colorValue': colorValue,
       'archivedAt': archivedAt?.toIso8601String(),
     };
   }
 
   factory Pet.fromJson(Map<String, dynamic> json) {
+    final id = json['id'] as String;
     final archivedAtRaw = json['archivedAt'] as String?;
 
     return Pet(
-      id: json['id'] as String,
+      id: id,
       name: json['name'] as String,
       species: PetSpecies.values.byName(json['species'] as String),
       estimatedAgeYears: json['estimatedAgeYears'] as int,
       createdAt: DateTime.parse(json['createdAt'] as String),
       breed: json['breed'] as String?,
-      sex: PetSex.values.byName((json['sex'] as String?) ?? PetSex.unknown.name),
+      sex: PetSex.values.byName(
+        (json['sex'] as String?) ?? PetSex.unknown.name,
+      ),
       microchip: json['microchip'] as String?,
       vetName: json['vetName'] as String?,
+      profileImagePath: json['profileImagePath'] as String?,
+      colorValue: (json['colorValue'] as int?) ?? defaultColorValueForSeed(id),
       archivedAt: archivedAtRaw == null ? null : DateTime.parse(archivedAtRaw),
     );
   }

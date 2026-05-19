@@ -89,6 +89,7 @@ class LocalAppDataService implements AppDataService {
   @override
   Future<void> clearLocalData() async {
     await _deleteStoredDocumentFiles();
+    await _deleteStoredProfilePhotoFiles();
 
     await _preferences.remove(_petsKey);
     await _preferences.remove(_remindersKey);
@@ -134,6 +135,28 @@ class LocalAppDataService implements AppDataService {
       }
 
       final file = File(localPath);
+
+      if (await file.exists()) {
+        await file.delete();
+      }
+    }
+  }
+
+  Future<void> _deleteStoredProfilePhotoFiles() async {
+    final pets = _decodeList(_preferences.getString(_petsKey));
+
+    for (final item in pets) {
+      if (item is! Map<String, dynamic>) {
+        continue;
+      }
+
+      final profileImagePath = item['profileImagePath'];
+
+      if (profileImagePath is! String || profileImagePath.isEmpty) {
+        continue;
+      }
+
+      final file = File(profileImagePath);
 
       if (await file.exists()) {
         await file.delete();
