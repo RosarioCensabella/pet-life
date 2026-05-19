@@ -246,16 +246,24 @@ class PetDashboardScreen extends ConsumerWidget {
       );
     }
 
+
     if (featureFlags.reportsModuleEnabled) {
       modules.add(
         PetModuleItem(
-          icon: Icons.picture_as_pdf_outlined,
+          icon: Icons.summarize_outlined,
           title: l10n.moduleReportsTitle,
-          description: '',
-          onTap: () {},
+          description: _localized(
+            context,
+            it: 'Riepilogo organizzativo da copiare, senza diagnosi.',
+            en: 'Organizational summary you can copy, without diagnosis.',
+          ),
+          onTap: () => context.push('/pets/${pet.id}/reports'),
         ),
       );
     }
+
+
+
 
     return modules;
   }

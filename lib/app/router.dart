@@ -15,6 +15,7 @@ import '../features/pets/presentation/edit_pet_screen.dart';
 import '../features/pets/presentation/pet_dashboard_screen.dart';
 import '../features/reminders/presentation/add_reminder_screen.dart';
 import '../features/reminders/presentation/reminders_screen.dart';
+import '../features/reports/presentation/non_diagnostic_report_screen.dart';
 import '../features/settings/presentation/legal_document_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/subscription/presentation/paywall_screen.dart';
@@ -165,6 +166,14 @@ GoRouter buildAppRouter() {
           final petId = state.pathParameters['petId']!;
 
           return ExpensesScreen(petId: petId);
+        },
+      ),
+      GoRoute(
+        path: '/pets/:petId/reports',
+        builder: (context, state) {
+          final petId = state.pathParameters['petId']!;
+
+          return NonDiagnosticReportScreen(petId: petId);
         },
       ),
     ],

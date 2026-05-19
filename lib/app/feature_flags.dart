@@ -44,7 +44,7 @@ const defaultFeatureFlags = FeatureFlags(
   visitsModuleEnabled: true,
   expensesModuleEnabled: true,
   insuranceModuleEnabled: false,
-  reportsModuleEnabled: false,
+  reportsModuleEnabled: true,
   subscriptionModuleEnabled: true,
   storePurchaseActionsEnabled: false,
 );

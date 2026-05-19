@@ -101,9 +101,9 @@ void main() {
     expect(find.text('Farmaci'), findsOneWidget);
     expect(find.text('Visite'), findsOneWidget);
     expect(find.text('Spese'), findsOneWidget);
+    expect(find.text('Report'), findsOneWidget);
 
     expect(find.text('Assicurazione'), findsNothing);
-    expect(find.text('Report'), findsNothing);
   });
 
   testWidgets('Settings shows legal, notification and data sections', (
