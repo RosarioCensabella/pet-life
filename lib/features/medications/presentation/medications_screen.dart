@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/theme.dart';
 import '../../pets/application/pet_controller.dart';
 import '../../pets/domain/pet.dart';
 import '../../reminders/application/reminder_controller.dart';
@@ -61,6 +63,118 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     _instructionsController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = _MedicationStrings.of(context);
+    final petsState = ref.watch(petControllerProvider);
+    final medicationState = ref.watch(medicationControllerProvider);
+
+    return Scaffold(
+      body: SafeArea(
+        child: petsState.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stackTrace) => _ErrorState(error: error),
+          data: (pets) {
+            final pet = _findPet(pets, widget.petId);
+
+            if (pet == null) {
+              return _PetNotFoundState(
+                title: strings.petNotFound,
+                onBack: () => context.go('/home'),
+              );
+            }
+
+            return medicationState.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stackTrace) => _ErrorState(error: error),
+              data: (entries) {
+                final petEntries = entries
+                    .where((entry) => entry.petId == pet.id)
+                    .toList(growable: false)
+                  ..sort((a, b) => b.startDate.compareTo(a.startDate));
+
+                final activeCount = petEntries
+                    .where((entry) => entry.status == MedicationStatus.active)
+                    .length;
+
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                  children: [
+                    _TopBar(
+                      title: strings.medicationsTitle,
+                      onBack: () => context.go('/pets/${pet.id}'),
+                    ),
+                    const SizedBox(height: 12),
+                    _HeroCard(
+                      strings: strings,
+                      activeCount: activeCount,
+                      totalCount: petEntries.length,
+                    ),
+                    const SizedBox(height: 12),
+                    _DisclaimerCard(strings: strings),
+                    const SizedBox(height: 12),
+                    _MedicationFormCard(
+                      formKey: _formKey,
+                      nameController: _nameController,
+                      prescribedByController: _prescribedByController,
+                      instructionsController: _instructionsController,
+                      notesController: _notesController,
+                      selectedStatus: _selectedStatus,
+                      startDate: _startDate,
+                      endDate: _endDate,
+                      reminderTimes: _reminderTimes,
+                      strings: strings,
+                      isSaving: _isSaving,
+                      isEditing: _editingEntry != null,
+                      onStatusChanged: (status) {
+                        if (status == null) {
+                          return;
+                        }
+
+                        setState(() {
+                          _selectedStatus = status;
+                        });
+                      },
+                      onSelectStartDate: _selectStartDate,
+                      onSelectEndDate: _selectEndDate,
+                      onClearEndDate: () {
+                        setState(() {
+                          _endDate = null;
+                        });
+                      },
+                      onAddReminderTime: _addReminderTime,
+                      onEditReminderTime: _editReminderTime,
+                      onRemoveReminderTime: _removeReminderTime,
+                      onSave: () => _saveEntry(pet, strings),
+                      onCancelEditing: _cancelEditing,
+                    ),
+                    const SizedBox(height: 14),
+                    _SectionHeader(
+                      title: strings.savedTherapies,
+                      count: petEntries.length,
+                    ),
+                    const SizedBox(height: 8),
+                    if (petEntries.isEmpty)
+                      _EmptyMedicationCard(strings: strings)
+                    else
+                      ...petEntries.map(
+                        (entry) => _MedicationEntryCard(
+                          entry: entry,
+                          strings: strings,
+                          onEdit: () => _startEditing(entry),
+                          onDelete: () => _confirmDelete(entry, strings),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
   }
 
   Future<void> _selectStartDate() async {
@@ -175,7 +289,6 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(strings.atLeastOneReminderTime)),
       );
-
       return;
     }
 
@@ -215,7 +328,6 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(strings.reminderMustHaveFutureOccurrence)),
         );
-
         return;
       }
 
@@ -241,18 +353,18 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
         await ref.read(medicationControllerProvider.notifier).addEntry(entry);
       } else {
         for (final reminderId in _editingEntry!.automaticReminderIds) {
-          await ref.read(reminderControllerProvider.notifier).deleteReminder(
-                reminderId,
-              );
+          await ref
+              .read(reminderControllerProvider.notifier)
+              .deleteReminder(reminderId);
         }
 
         await ref.read(medicationControllerProvider.notifier).updateEntry(entry);
       }
 
       for (final reminder in reminders) {
-        await ref.read(reminderControllerProvider.notifier).addReminder(
-              reminder,
-            );
+        await ref
+            .read(reminderControllerProvider.notifier)
+            .addReminder(reminder);
       }
 
       if (!mounted) {
@@ -294,14 +406,14 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     final maxScheduleEndDate = _dateOnly(
       now.add(const Duration(days: _notificationSchedulingWindowDays)),
     );
-    final requestedEndDay =
-        _endDate == null ? maxScheduleEndDate : _dateOnly(_endDate!);
+    final requestedEndDay = _endDate == null
+        ? maxScheduleEndDate
+        : _dateOnly(_endDate!);
     final scheduleEndDay = requestedEndDay.isAfter(maxScheduleEndDate)
         ? maxScheduleEndDate
         : requestedEndDay;
 
     final reminders = <Reminder>[];
-
     var currentDay = startDay;
 
     while (!currentDay.isAfter(scheduleEndDay)) {
@@ -367,7 +479,7 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     required String instructions,
     required String notes,
   }) {
-    final lines = <String>[
+    final lines = [
       strings.reminderNoteHeader,
     ];
 
@@ -469,9 +581,9 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     await ref.read(medicationControllerProvider.notifier).deleteEntry(entry.id);
 
     for (final reminderId in entry.automaticReminderIds) {
-      await ref.read(reminderControllerProvider.notifier).deleteReminder(
-            reminderId,
-          );
+      await ref
+          .read(reminderControllerProvider.notifier)
+          .deleteReminder(reminderId);
     }
 
     if (!mounted) {
@@ -517,123 +629,6 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     return DateTime(value.year, value.month, value.day);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final strings = _MedicationStrings.of(context);
-    final petsState = ref.watch(petControllerProvider);
-    final medicationState = ref.watch(medicationControllerProvider);
-
-    return petsState.when(
-      loading: () => Scaffold(
-        appBar: AppBar(title: Text(strings.medicationsTitle)),
-        body: const Center(child: CircularProgressIndicator()),
-      ),
-      error: (error, stackTrace) => Scaffold(
-        appBar: AppBar(title: Text(strings.medicationsTitle)),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              error.toString(),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      ),
-      data: (pets) {
-        final pet = _findPet(pets, widget.petId);
-
-        if (pet == null) {
-          return Scaffold(
-            appBar: AppBar(title: Text(strings.medicationsTitle)),
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(strings.petNotFound),
-              ),
-            ),
-          );
-        }
-
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(strings.medicationsTitle),
-          ),
-          body: medicationState.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stackTrace) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  error.toString(),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-            data: (entries) {
-              final petEntries = entries
-                  .where((entry) => entry.petId == pet.id)
-                  .toList(growable: false);
-
-              return ListView(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                children: [
-                  _DisclaimerCard(strings: strings),
-                  _AddMedicationEntryCard(
-                    formKey: _formKey,
-                    nameController: _nameController,
-                    prescribedByController: _prescribedByController,
-                    instructionsController: _instructionsController,
-                    notesController: _notesController,
-                    selectedStatus: _selectedStatus,
-                    startDate: _startDate,
-                    endDate: _endDate,
-                    reminderTimes: _reminderTimes,
-                    strings: strings,
-                    isSaving: _isSaving,
-                    isEditing: _editingEntry != null,
-                    onStatusChanged: (status) {
-                      if (status == null) {
-                        return;
-                      }
-
-                      setState(() {
-                        _selectedStatus = status;
-                      });
-                    },
-                    onSelectStartDate: _selectStartDate,
-                    onSelectEndDate: _selectEndDate,
-                    onClearEndDate: () {
-                      setState(() {
-                        _endDate = null;
-                      });
-                    },
-                    onAddReminderTime: _addReminderTime,
-                    onEditReminderTime: _editReminderTime,
-                    onRemoveReminderTime: _removeReminderTime,
-                    onSave: () => _saveEntry(pet, strings),
-                    onCancelEditing: _cancelEditing,
-                  ),
-                  if (petEntries.isEmpty)
-                    _EmptyMedicationCard(strings: strings)
-                  else
-                    ...petEntries.map(
-                      (entry) => _MedicationEntryCard(
-                        entry: entry,
-                        strings: strings,
-                        onEdit: () => _startEditing(entry),
-                        onDelete: () => _confirmDelete(entry, strings),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
   Pet? _findPet(List<Pet> pets, String petId) {
     for (final pet in pets) {
       if (pet.id == petId) {
@@ -642,6 +637,170 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     }
 
     return null;
+  }
+}
+
+class _TopBar extends StatelessWidget {
+  const _TopBar({
+    required this.title,
+    required this.onBack,
+  });
+
+  final String title;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = _MedicationStrings.of(context);
+
+    return Row(
+      children: [
+        Material(
+          color: PetLifeDesign.softSurface,
+          shape: const CircleBorder(),
+          child: IconButton(
+            tooltip: strings.back,
+            onPressed: onBack,
+            icon: const Icon(Icons.arrow_back_rounded),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.4,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeroCard extends StatelessWidget {
+  const _HeroCard({
+    required this.strings,
+    required this.activeCount,
+    required this.totalCount,
+  });
+
+  final _MedicationStrings strings;
+  final int activeCount;
+  final int totalCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: PetLifeDesign.primaryBrown,
+        borderRadius: BorderRadius.circular(PetLifeDesign.radiusExtraLarge),
+        boxShadow: [PetLifeDesign.softShadow],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(
+                Icons.medication_outlined,
+                color: Colors.white,
+                size: 30,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    strings.medicationsTitle,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.8,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    strings.heroSubtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.76),
+                          height: 1.35,
+                        ),
+                  ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _DarkPill(
+                        icon: Icons.favorite_border_outlined,
+                        label: '$activeCount ${strings.activeTherapies}',
+                      ),
+                      _DarkPill(
+                        icon: Icons.list_alt_outlined,
+                        label: '$totalCount ${strings.totalEntries}',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DarkPill extends StatelessWidget {
+  const _DarkPill({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -654,19 +813,30 @@ class _DisclaimerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4E8),
+        borderRadius: BorderRadius.circular(PetLifeDesign.radiusLarge),
+        border: Border.all(color: const Color(0xFFF0D6BF)),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.info_outline,
-              color: Theme.of(context).colorScheme.primary,
+            const Icon(
+              Icons.info_outline_rounded,
+              color: Color(0xFFB87841),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(strings.disclaimer),
+              child: Text(
+                strings.disclaimer,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF7B5537),
+                      height: 1.35,
+                    ),
+              ),
             ),
           ],
         ),
@@ -675,8 +845,8 @@ class _DisclaimerCard extends StatelessWidget {
   }
 }
 
-class _AddMedicationEntryCard extends StatelessWidget {
-  const _AddMedicationEntryCard({
+class _MedicationFormCard extends StatelessWidget {
+  const _MedicationFormCard({
     required this.formKey,
     required this.nameController,
     required this.prescribedByController,
@@ -730,7 +900,7 @@ class _AddMedicationEntryCard extends StatelessWidget {
         ? strings.noEndDate
         : DateFormat.yMMMd(locale).format(endDate!);
 
-    return Card(
+    return _SoftCard(
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -738,11 +908,10 @@ class _AddMedicationEntryCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                isEditing ? strings.editEntry : strings.addEntry,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+              _CardTitle(
+                icon: isEditing ? Icons.edit_outlined : Icons.add_rounded,
+                title: isEditing ? strings.editEntry : strings.addEntry,
+                subtitle: strings.formSubtitle,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -750,7 +919,6 @@ class _AddMedicationEntryCard extends StatelessWidget {
                 decoration: InputDecoration(
                   labelText: strings.medicationNameLabel,
                   hintText: strings.medicationNameHint,
-                  border: const OutlineInputBorder(),
                 ),
                 validator: (value) {
                   final text = value?.trim() ?? '';
@@ -764,10 +932,10 @@ class _AddMedicationEntryCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<MedicationStatus>(
+                key: ValueKey('medication-status-$selectedStatus'),
                 initialValue: selectedStatus,
                 decoration: InputDecoration(
                   labelText: strings.statusLabel,
-                  border: const OutlineInputBorder(),
                 ),
                 items: MedicationStatus.values
                     .map(
@@ -780,33 +948,38 @@ class _AddMedicationEntryCard extends StatelessWidget {
                 onChanged: onStatusChanged,
               ),
               const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: onSelectStartDate,
-                icon: const Icon(Icons.event_outlined),
-                label: Text('${strings.startDate}: $startDateLabel'),
+              _DateActionTile(
+                icon: Icons.event_outlined,
+                title: strings.startDate,
+                value: startDateLabel,
+                onTap: onSelectStartDate,
               ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: onSelectEndDate,
-                icon: const Icon(Icons.event_available_outlined),
-                label: Text('${strings.endDate}: $endDateLabel'),
+              const SizedBox(height: 10),
+              _DateActionTile(
+                icon: Icons.event_available_outlined,
+                title: strings.endDate,
+                value: endDateLabel,
+                onTap: onSelectEndDate,
               ),
               if (endDate != null) ...[
                 const SizedBox(height: 8),
-                TextButton.icon(
-                  onPressed: onClearEndDate,
-                  icon: const Icon(Icons.close_outlined),
-                  label: Text(strings.clearEndDate),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: onClearEndDate,
+                    icon: const Icon(Icons.close_outlined),
+                    label: Text(strings.clearEndDate),
+                  ),
                 ),
               ],
               const SizedBox(height: 16),
               Text(
                 strings.dailyReminderTimes,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
                     ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 strings.automaticReminderDescription,
                 style: Theme.of(context).textTheme.bodySmall,
@@ -844,7 +1017,6 @@ class _AddMedicationEntryCard extends StatelessWidget {
                 decoration: InputDecoration(
                   labelText: strings.prescribedByLabel,
                   hintText: strings.prescribedByHint,
-                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
@@ -853,7 +1025,6 @@ class _AddMedicationEntryCard extends StatelessWidget {
                 decoration: InputDecoration(
                   labelText: strings.instructionsLabel,
                   hintText: strings.instructionsHint,
-                  border: const OutlineInputBorder(),
                 ),
                 minLines: 2,
                 maxLines: 4,
@@ -864,12 +1035,11 @@ class _AddMedicationEntryCard extends StatelessWidget {
                 decoration: InputDecoration(
                   labelText: strings.notesLabel,
                   hintText: strings.notesHint,
-                  border: const OutlineInputBorder(),
                 ),
                 minLines: 2,
                 maxLines: 4,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
               FilledButton.icon(
                 onPressed: isSaving ? null : onSave,
                 icon: isSaving
@@ -896,6 +1066,154 @@ class _AddMedicationEntryCard extends StatelessWidget {
   }
 }
 
+class _DateActionTile extends StatelessWidget {
+  const _DateActionTile({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: PetLifeDesign.softSurface.withValues(alpha: 0.76),
+      borderRadius: BorderRadius.circular(PetLifeDesign.radiusMedium),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(PetLifeDesign.radiusMedium),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: PetLifeDesign.secondaryBrown,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                ),
+              ),
+              Text(
+                value,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CardTitle extends StatelessWidget {
+  const _CardTitle({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: const Color(0xFFC85B4A).withValues(alpha: 0.13),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Icon(
+            icon,
+            color: const Color(0xFFC85B4A),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.4,
+                    ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    required this.count,
+  });
+
+  final String title;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 8, 4, 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.2,
+                  ),
+            ),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: PetLifeDesign.softSurface,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              child: Text(
+                count.toString(),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: PetLifeDesign.secondaryBrown,
+                      fontWeight: FontWeight.w900,
+                    ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _EmptyMedicationCard extends StatelessWidget {
   const _EmptyMedicationCard({
     required this.strings,
@@ -905,28 +1223,37 @@ class _EmptyMedicationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return _SoftCard(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(22),
         child: Column(
           children: [
-            Icon(
-              Icons.medication_outlined,
-              size: 48,
-              color: Theme.of(context).colorScheme.primary,
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: const Color(0xFFC85B4A).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: const Icon(
+                Icons.medication_outlined,
+                size: 34,
+                color: Color(0xFFC85B4A),
+              ),
             ),
             const SizedBox(height: 16),
             Text(
               strings.emptyTitle,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w900,
                   ),
             ),
             const SizedBox(height: 8),
             Text(
               strings.emptyDescription,
               textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
         ),
@@ -967,43 +1294,257 @@ class _MedicationEntryCard extends StatelessWidget {
         )
         .join(' · ');
 
-    return Card(
-      child: ListTile(
-        leading: const Icon(Icons.medication_outlined),
-        title: Text(entry.name),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: PetLifeDesign.warmSurface,
+        borderRadius: BorderRadius.circular(PetLifeDesign.radiusLarge),
+        border: Border.all(color: PetLifeDesign.outline),
+        boxShadow: [PetLifeDesign.subtleShadow],
+      ),
+      child: IntrinsicHeight(
+        child: Row(
           children: [
-            Text('${strings.statusLabel}: ${strings.statusLabelFor(entry.status)}'),
-            Text(dateText),
-            Text('${strings.dailyReminderTimes}: $reminderTimesText'),
-            if (entry.prescribedBy != null &&
-                entry.prescribedBy!.trim().isNotEmpty)
-              Text('${strings.prescribedByShort}: ${entry.prescribedBy!}'),
-            if (entry.instructions != null &&
-                entry.instructions!.trim().isNotEmpty)
-              Text('${strings.instructionsShort}: ${entry.instructions!}'),
-            if (entry.notes != null && entry.notes!.trim().isNotEmpty)
-              Text(entry.notes!),
+            Container(
+              width: 6,
+              decoration: const BoxDecoration(
+                color: Color(0xFFC85B4A),
+                borderRadius: BorderRadius.horizontal(
+                  left: Radius.circular(PetLifeDesign.radiusLarge),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFC85B4A).withValues(alpha: 0.13),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(
+                        Icons.medication_outlined,
+                        color: Color(0xFFC85B4A),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            entry.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                ),
+                          ),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              _InfoPill(
+                                color: _statusColor(entry.status),
+                                icon: Icons.circle,
+                                label: strings.statusLabelFor(entry.status),
+                              ),
+                              _InfoPill(
+                                color: PetLifeDesign.secondaryBrown,
+                                icon: Icons.calendar_month_outlined,
+                                label: dateText,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${strings.dailyReminderTimes}: $reminderTimesText',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          if (entry.prescribedBy != null &&
+                              entry.prescribedBy!.trim().isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              '${strings.prescribedByShort}: ${entry.prescribedBy!}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                          if (entry.instructions != null &&
+                              entry.instructions!.trim().isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              '${strings.instructionsShort}: ${entry.instructions!}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                          if (entry.notes != null &&
+                              entry.notes!.trim().isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              entry.notes!,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Column(
+                      children: [
+                        IconButton(
+                          tooltip: strings.edit,
+                          onPressed: onEdit,
+                          icon: const Icon(Icons.edit_outlined),
+                        ),
+                        IconButton(
+                          tooltip: strings.delete,
+                          onPressed: onDelete,
+                          icon: const Icon(Icons.delete_outline),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
-        trailing: SizedBox(
-          width: 96,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              IconButton(
-                tooltip: strings.edit,
-                onPressed: onEdit,
-                icon: const Icon(Icons.edit_outlined),
-              ),
-              IconButton(
-                tooltip: strings.delete,
-                onPressed: onDelete,
-                icon: const Icon(Icons.delete_outline),
-              ),
-            ],
+      ),
+    );
+  }
+
+  Color _statusColor(MedicationStatus status) {
+    return switch (status) {
+      MedicationStatus.active => PetLifeDesign.success,
+      MedicationStatus.completed => PetLifeDesign.secondaryBrown,
+      MedicationStatus.paused => const Color(0xFFE49D4F),
+    };
+  }
+}
+
+class _InfoPill extends StatelessWidget {
+  const _InfoPill({
+    required this.color,
+    required this.icon,
+    required this.label,
+  });
+
+  final Color color;
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 13,
+              color: color,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w900,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SoftCard extends StatelessWidget {
+  const _SoftCard({
+    required this.child,
+  });
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: PetLifeDesign.warmSurface,
+        borderRadius: BorderRadius.circular(PetLifeDesign.radiusExtraLarge),
+        border: Border.all(color: PetLifeDesign.outline),
+        boxShadow: [PetLifeDesign.subtleShadow],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _PetNotFoundState extends StatelessWidget {
+  const _PetNotFoundState({
+    required this.title,
+    required this.onBack,
+  });
+
+  final String title;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: _SoftCard(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(title),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: onBack,
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({
+    required this.error,
+  });
+
+  final Object error;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          error.toString(),
+          textAlign: TextAlign.center,
         ),
       ),
     );
@@ -1012,7 +1553,13 @@ class _MedicationEntryCard extends StatelessWidget {
 
 class _MedicationStrings {
   const _MedicationStrings({
+    required this.back,
     required this.medicationsTitle,
+    required this.heroSubtitle,
+    required this.activeTherapies,
+    required this.totalEntries,
+    required this.savedTherapies,
+    required this.formSubtitle,
     required this.addEntry,
     required this.editEntry,
     required this.medicationNameLabel,
@@ -1058,7 +1605,13 @@ class _MedicationStrings {
     required this.takeMedicationReminderPrefix,
   });
 
+  final String back;
   final String medicationsTitle;
+  final String heroSubtitle;
+  final String activeTherapies;
+  final String totalEntries;
+  final String savedTherapies;
+  final String formSubtitle;
   final String addEntry;
   final String editEntry;
   final String medicationNameLabel;
@@ -1120,7 +1673,15 @@ class _MedicationStrings {
 
     if (languageCode == 'en') {
       return const _MedicationStrings(
+        back: 'Back',
         medicationsTitle: 'Medications',
+        heroSubtitle:
+            'Organize therapies prescribed by your veterinarian and create daily reminders automatically.',
+        activeTherapies: 'active',
+        totalEntries: 'saved',
+        savedTherapies: 'Saved therapies',
+        formSubtitle:
+            'Enter only information already provided by your veterinarian.',
         addEntry: 'Add medication',
         editEntry: 'Edit medication',
         medicationNameLabel: 'Medication name',
@@ -1154,7 +1715,8 @@ class _MedicationStrings {
         updateEntry: 'Update medication',
         cancelEdit: 'Cancel edit',
         entrySavedWithReminders: 'Medication saved and reminders created',
-        entryUpdatedWithReminders: 'Medication updated and reminders refreshed',
+        entryUpdatedWithReminders:
+            'Medication updated and reminders refreshed',
         emptyTitle: 'No medications',
         emptyDescription:
             'Add medications only as a personal record of information provided by your veterinarian.',
@@ -1175,7 +1737,15 @@ class _MedicationStrings {
     }
 
     return const _MedicationStrings(
+      back: 'Indietro',
       medicationsTitle: 'Farmaci',
+      heroSubtitle:
+          'Organizza le terapie indicate dal veterinario e tieni gli orari sempre sotto controllo.',
+      activeTherapies: 'attivi',
+      totalEntries: 'salvati',
+      savedTherapies: 'Terapie salvate',
+      formSubtitle:
+          'Inserisci solo informazioni già fornite dal veterinario.',
       addEntry: 'Aggiungi farmaco',
       editEntry: 'Modifica farmaco',
       medicationNameLabel: 'Nome farmaco',
@@ -1209,7 +1779,8 @@ class _MedicationStrings {
       updateEntry: 'Aggiorna farmaco',
       cancelEdit: 'Annulla modifica',
       entrySavedWithReminders: 'Farmaco salvato e promemoria creati',
-      entryUpdatedWithReminders: 'Farmaco aggiornato e promemoria rigenerati',
+      entryUpdatedWithReminders:
+          'Farmaco aggiornato e promemoria rigenerati',
       emptyTitle: 'Nessun farmaco',
       emptyDescription:
           'Aggiungi farmaci solo come registro personale delle informazioni fornite dal veterinario.',
