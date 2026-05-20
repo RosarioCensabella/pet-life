@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +11,12 @@ import '../../reminders/application/reminder_controller.dart';
 import '../../reminders/domain/reminder.dart';
 import '../application/medication_controller.dart';
 import '../domain/medication_entry.dart';
+
+enum _MedicationFilter {
+  active,
+  past,
+  all,
+}
 
 class MedicationsScreen extends ConsumerStatefulWidget {
   const MedicationsScreen({
@@ -23,56 +31,16 @@ class MedicationsScreen extends ConsumerStatefulWidget {
 }
 
 class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
-  static const _notificationSchedulingWindowDays = 90;
-
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _prescribedByController = TextEditingController();
-  final _instructionsController = TextEditingController();
-  final _notesController = TextEditingController();
-
-  MedicationStatus _selectedStatus = MedicationStatus.active;
-  late DateTime _startDate;
-  DateTime? _endDate;
-  late List<TimeOfDay> _reminderTimes;
-
-  MedicationEntry? _editingEntry;
-  bool _isSaving = false;
-
-  @override
-  void initState() {
-    super.initState();
-
-    final initialDateTime = DateTime.now().add(const Duration(hours: 1));
-
-    _startDate = DateTime(
-      initialDateTime.year,
-      initialDateTime.month,
-      initialDateTime.day,
-    );
-
-    _reminderTimes = [
-      TimeOfDay.fromDateTime(initialDateTime),
-    ];
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _prescribedByController.dispose();
-    _instructionsController.dispose();
-    _notesController.dispose();
-    super.dispose();
-  }
+  _MedicationFilter _filter = _MedicationFilter.active;
 
   @override
   Widget build(BuildContext context) {
-    final strings = _MedicationStrings.of(context);
     final petsState = ref.watch(petControllerProvider);
     final medicationState = ref.watch(medicationControllerProvider);
+    final reminderState = ref.watch(reminderControllerProvider);
 
     return Scaffold(
-      backgroundColor: _MedicationPalette.background,
+      backgroundColor: _MedPalette.background,
       body: SafeArea(
         child: petsState.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -81,146 +49,82 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
             final pet = _findPet(pets, widget.petId);
 
             if (pet == null) {
-              return _PetNotFoundState(strings: strings);
+              return const _ErrorState(error: 'Pet non trovato');
             }
 
             return medicationState.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stackTrace) => _ErrorState(error: error),
               data: (entries) {
+                final reminders = reminderState.valueOrNull ?? const <Reminder>[];
+
                 final petEntries = entries
                     .where((entry) => entry.petId == pet.id)
-                    .toList(growable: false)
-                  ..sort((a, b) {
-                    final statusCompare = _statusWeight(a.status)
-                        .compareTo(_statusWeight(b.status));
-
-                    if (statusCompare != 0) {
-                      return statusCompare;
-                    }
-
-                    return b.startDate.compareTo(a.startDate);
-                  });
-
-                final activeEntries = petEntries
-                    .where((entry) => entry.status == MedicationStatus.active)
                     .toList(growable: false);
 
-                final historyEntries = petEntries
-                    .where((entry) => entry.status != MedicationStatus.active)
-                    .toList(growable: false);
+                petEntries.sort(
+                  (a, b) => b.startDate.compareTo(a.startDate),
+                );
 
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _TopBar(
-                        title: strings.medicationsTitle,
-                        subtitle: strings.medicationsSubtitle,
-                        onBack: () => context.go('/pets/${pet.id}'),
-                        onAdd: _scrollToForm,
-                      ),
-                      const SizedBox(height: 18),
-                      Text(
-                        strings.inProgress,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontSize: 14,
-                              color: _MedicationPalette.darkText,
-                              fontWeight: FontWeight.w900,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      if (activeEntries.isEmpty)
-                        _EmptyMedicationCard(strings: strings)
-                      else
-                        ...activeEntries.map(
-                          (entry) => _MedicationTherapyCard(
-                            entry: entry,
+                final filteredEntries = _filterEntries(petEntries);
+
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(26, 18, 26, 30),
+                  children: [
+                    _Header(
+                      onBack: () => context.go('/pets/${pet.id}'),
+                      onAdd: () => _openEditor(pet: pet),
+                    ),
+                    const SizedBox(height: 16),
+                    _FilterRow(
+                      filter: _filter,
+                      onChanged: (filter) {
+                        setState(() {
+                          _filter = filter;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      _sectionTitle,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: _MedPalette.darkText,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (filteredEntries.isEmpty)
+                      _EmptyState(
+                        title: _emptyTitle,
+                        description:
+                            'Tocca + per aggiungere una cura prescritta dal veterinario.',
+                      )
+                    else
+                      ...filteredEntries.map(
+                        (entry) => _MedicationCard(
+                          entry: entry,
+                          pet: pet,
+                          reminders: reminders,
+                          onSuspendOrReinstate: () {
+                            if (entry.status == MedicationStatus.paused) {
+                              _reinstate(entry);
+                            } else {
+                              _suspend(entry);
+                            }
+                          },
+                          onEdit: () => _openEditor(
                             pet: pet,
-                            strings: strings,
-                            onSkip: () => _setStatus(
-                              entry,
-                              MedicationStatus.paused,
-                            ),
-                            onMarkTaken: () => _setStatus(
-                              entry,
-                              MedicationStatus.completed,
-                            ),
-                            onEdit: () => _startEditing(entry),
+                            entry: entry,
+                          ),
+                          onTaken: () => _markNextDoseTaken(
+                            entry,
+                            reminders,
                           ),
                         ),
-                      const SizedBox(height: 10),
-                      _DisclaimerCard(strings: strings),
-                      if (historyEntries.isNotEmpty) ...[
-                        const SizedBox(height: 22),
-                        _SectionHeader(
-                          title: strings.history,
-                          count: historyEntries.length,
-                        ),
-                        const SizedBox(height: 8),
-                        ...historyEntries.map(
-                          (entry) => _MedicationTherapyCard(
-                            entry: entry,
-                            pet: pet,
-                            strings: strings,
-                            onSkip: () => _setStatus(
-                              entry,
-                              MedicationStatus.paused,
-                            ),
-                            onMarkTaken: () => _setStatus(
-                              entry,
-                              MedicationStatus.completed,
-                            ),
-                            onEdit: () => _startEditing(entry),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 22),
-                      _MedicationFormCard(
-                        formKey: _formKey,
-                        nameController: _nameController,
-                        prescribedByController: _prescribedByController,
-                        instructionsController: _instructionsController,
-                        notesController: _notesController,
-                        selectedStatus: _selectedStatus,
-                        startDate: _startDate,
-                        endDate: _endDate,
-                        reminderTimes: _reminderTimes,
-                        strings: strings,
-                        isSaving: _isSaving,
-                        isEditing: _editingEntry != null,
-                        onStatusChanged: (status) {
-                          if (status == null) {
-                            return;
-                          }
-
-                          setState(() {
-                            _selectedStatus = status;
-                          });
-                        },
-                        onSelectStartDate: _selectStartDate,
-                        onSelectEndDate: _selectEndDate,
-                        onClearEndDate: () {
-                          setState(() {
-                            _endDate = null;
-                          });
-                        },
-                        onAddReminderTime: _addReminderTime,
-                        onEditReminderTime: _editReminderTime,
-                        onRemoveReminderTime: _removeReminderTime,
-                        onSave: () => _saveEntry(pet, strings),
-                        onCancelEditing: _cancelEditing,
                       ),
-                      const SizedBox(height: 20),
-                      if (petEntries.isNotEmpty)
-                        _DangerDeleteArea(
-                          entries: petEntries,
-                          strings: strings,
-                          onDelete: (entry) => _confirmDelete(entry, strings),
-                        ),
-                    ],
-                  ),
+                    const SizedBox(height: 12),
+                    const _DisclaimerCard(),
+                  ],
                 );
               },
             );
@@ -230,11 +134,35 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     );
   }
 
-  int _statusWeight(MedicationStatus status) {
-    return switch (status) {
-      MedicationStatus.active => 0,
-      MedicationStatus.paused => 1,
-      MedicationStatus.completed => 2,
+  String get _sectionTitle {
+    return switch (_filter) {
+      _MedicationFilter.active => 'In corso',
+      _MedicationFilter.past => 'Archivio',
+      _MedicationFilter.all => 'Tutte le cure',
+    };
+  }
+
+  String get _emptyTitle {
+    return switch (_filter) {
+      _MedicationFilter.active => 'Nessun farmaco attivo',
+      _MedicationFilter.past => 'Nessuna cura archiviata',
+      _MedicationFilter.all => 'Nessun farmaco',
+    };
+  }
+
+  List<MedicationEntry> _filterEntries(List<MedicationEntry> entries) {
+    return switch (_filter) {
+      _MedicationFilter.active => entries
+          .where(
+            (entry) =>
+                entry.status == MedicationStatus.active ||
+                entry.status == MedicationStatus.paused,
+          )
+          .toList(growable: false),
+      _MedicationFilter.past => entries
+          .where((entry) => entry.status == MedicationStatus.completed)
+          .toList(growable: false),
+      _MedicationFilter.all => entries,
     };
   }
 
@@ -248,247 +176,145 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     return null;
   }
 
-  Future<void> _selectStartDate() async {
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: _startDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now().add(const Duration(days: 3650)),
-    );
-
-    if (pickedDate == null || !mounted) {
-      return;
-    }
-
-    setState(() {
-      _startDate = DateTime(
-        pickedDate.year,
-        pickedDate.month,
-        pickedDate.day,
-      );
-
-      if (_endDate != null && _endDate!.isBefore(_startDate)) {
-        _endDate = null;
-      }
-    });
-  }
-
-  Future<void> _selectEndDate() async {
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: _endDate ?? _startDate,
-      firstDate: DateTime(
-        _startDate.year,
-        _startDate.month,
-        _startDate.day,
-      ),
-      lastDate: DateTime.now().add(const Duration(days: 3650)),
-    );
-
-    if (pickedDate == null || !mounted) {
-      return;
-    }
-
-    setState(() {
-      _endDate = DateTime(
-        pickedDate.year,
-        pickedDate.month,
-        pickedDate.day,
-      );
-    });
-  }
-
-  Future<void> _addReminderTime() async {
-    final initialTime =
-        _reminderTimes.isEmpty ? TimeOfDay.now() : _reminderTimes.last;
-
-    final pickedTime = await showTimePicker(
-      context: context,
-      initialTime: initialTime,
-    );
-
-    if (pickedTime == null || !mounted) {
-      return;
-    }
-
-    setState(() {
-      _reminderTimes = _sortAndDeduplicateTimes(
-        [..._reminderTimes, pickedTime],
-      );
-    });
-  }
-
-  Future<void> _editReminderTime(int index) async {
-    final pickedTime = await showTimePicker(
-      context: context,
-      initialTime: _reminderTimes[index],
-    );
-
-    if (pickedTime == null || !mounted) {
-      return;
-    }
-
-    final updatedTimes = [..._reminderTimes];
-    updatedTimes[index] = pickedTime;
-
-    setState(() {
-      _reminderTimes = _sortAndDeduplicateTimes(updatedTimes);
-    });
-  }
-
-  void _removeReminderTime(int index) {
-    if (_reminderTimes.length == 1) {
-      return;
-    }
-
-    final updatedTimes = [..._reminderTimes]..removeAt(index);
-
-    setState(() {
-      _reminderTimes = _sortAndDeduplicateTimes(updatedTimes);
-    });
-  }
-
-  Future<void> _saveEntry(Pet pet, _MedicationStrings strings) async {
-    final isValid = _formKey.currentState?.validate() ?? false;
-
-    if (!isValid) {
-      return;
-    }
-
-    if (_reminderTimes.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(strings.reminderTimesRequired)),
-      );
-      return;
-    }
-
-    setState(() {
-      _isSaving = true;
-    });
-
-    try {
-      final now = DateTime.now();
-      final wasEditing = _editingEntry != null;
-      final medicationId =
-          _editingEntry?.id ?? 'medication-${now.microsecondsSinceEpoch}';
-
-      final medicationName = _nameController.text.trim();
-      final prescribedBy = _prescribedByController.text.trim();
-      final instructions = _instructionsController.text.trim();
-      final notes = _notesController.text.trim();
-
-      final reminderTimes = _reminderTimes.map((time) {
-        return MedicationReminderTime(
-          id: _reminderTimeId(time),
-          hour: time.hour,
-          minute: time.minute,
-        );
-      }).toList(growable: false);
-
-      final reminders = _buildAutomaticReminders(
-        medicationId: medicationId,
-        medicationName: medicationName,
-        pet: pet,
-        strings: strings,
-        reminderTimes: reminderTimes,
-        prescribedBy: prescribedBy,
-        instructions: instructions,
-        notes: notes,
-      );
-
-      if (reminders.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(strings.reminderMustHaveFutureOccurrence)),
-        );
-        return;
-      }
-
-      final entry = MedicationEntry(
-        id: medicationId,
-        petId: pet.id,
-        petName: pet.name,
-        name: medicationName,
-        status: _selectedStatus,
-        startDate: _dateOnly(_startDate),
-        endDate: _endDate == null ? null : _dateOnly(_endDate!),
-        createdAt: _editingEntry?.createdAt ?? now,
-        prescribedBy: prescribedBy.isEmpty ? null : prescribedBy,
-        instructions: instructions.isEmpty ? null : instructions,
-        notes: notes.isEmpty ? null : notes,
-        reminderTimes: reminderTimes,
-        automaticReminderIds:
-            reminders.map((reminder) => reminder.id).toList(growable: false),
-      );
-
-      if (_editingEntry == null) {
-        await ref.read(medicationControllerProvider.notifier).addEntry(entry);
-      } else {
-        for (final reminderId in _editingEntry!.automaticReminderIds) {
-          await ref
-              .read(reminderControllerProvider.notifier)
-              .deleteReminder(reminderId);
-        }
-
-        await ref.read(medicationControllerProvider.notifier).updateEntry(entry);
-      }
-
-      for (final reminder in reminders) {
-        await ref
-            .read(reminderControllerProvider.notifier)
-            .addReminder(reminder);
-      }
-
-      if (!mounted) {
-        return;
-      }
-
-      _clearForm();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            wasEditing
-                ? strings.entryUpdatedWithReminders
-                : strings.entrySavedWithReminders,
-          ),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
-      }
-    }
-  }
-
-  List<Reminder> _buildAutomaticReminders({
-    required String medicationId,
-    required String medicationName,
+  Future<void> _openEditor({
     required Pet pet,
-    required _MedicationStrings strings,
+    MedicationEntry? entry,
+  }) async {
+    final result = await showModalBottomSheet<_MedicationEditorResult>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return _MedicationEditorSheet(
+          pet: pet,
+          entry: entry,
+        );
+      },
+    );
+
+    if (result == null || !mounted) {
+      return;
+    }
+
+    switch (result.action) {
+      case _MedicationEditorAction.save:
+        await _saveMedication(
+          pet: pet,
+          previousEntry: entry,
+          draft: result.draft!,
+        );
+      case _MedicationEditorAction.delete:
+        if (entry != null) {
+          await _deleteMedication(entry);
+        }
+    }
+  }
+
+  Future<void> _saveMedication({
+    required Pet pet,
+    required MedicationEntry? previousEntry,
+    required _MedicationDraft draft,
+  }) async {
+    final now = DateTime.now();
+    final medicationId =
+        previousEntry?.id ?? 'medication-${now.microsecondsSinceEpoch}';
+
+    if (previousEntry != null) {
+      await ref
+          .read(reminderControllerProvider.notifier)
+          .deleteReminders(previousEntry.automaticReminderIds);
+    }
+
+    final reminderTimes = draft.reminderTimes
+        .map(
+          (time) => MedicationReminderTime(
+            id: 'time-${time.hour.toString().padLeft(2, '0')}-${time.minute.toString().padLeft(2, '0')}',
+            hour: time.hour,
+            minute: time.minute,
+          ),
+        )
+        .toList(growable: false);
+
+    final reminders = _buildMedicationReminders(
+      medicationId: medicationId,
+      pet: pet,
+      medicationName: draft.name,
+      startDate: draft.startDate,
+      endDate: draft.endDate,
+      reminderTimes: reminderTimes,
+      instructions: draft.instructions,
+      notes: draft.notes,
+      prescribedBy: draft.prescribedBy,
+    );
+
+    final entry = MedicationEntry(
+      id: medicationId,
+      petId: pet.id,
+      petName: pet.name,
+      name: draft.name,
+      status: MedicationStatus.active,
+      startDate: _dateOnly(draft.startDate),
+      endDate: _dateOnly(draft.endDate),
+      dosage: draft.dosage,
+      prescribedBy: draft.prescribedBy.isEmpty ? null : draft.prescribedBy,
+      instructions: draft.instructions.isEmpty ? null : draft.instructions,
+      notes: draft.notes.isEmpty ? null : draft.notes,
+      reminderTimes: reminderTimes,
+      automaticReminderIds:
+          reminders.map((reminder) => reminder.id).toList(growable: false),
+      takenReminderIds: previousEntry == null
+          ? const []
+          : previousEntry.takenReminderIds
+              .where(
+                (id) => reminders.any((reminder) => reminder.id == id),
+              )
+              .toList(growable: false),
+      createdAt: previousEntry?.createdAt ?? now,
+      updatedAt: now,
+    );
+
+    if (previousEntry == null) {
+      await ref.read(medicationControllerProvider.notifier).addEntry(entry);
+    } else {
+      await ref.read(medicationControllerProvider.notifier).updateEntry(entry);
+    }
+
+    for (final reminder in reminders) {
+      await ref.read(reminderControllerProvider.notifier).addReminder(reminder);
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          previousEntry == null
+              ? 'Farmaco salvato e promemoria creati'
+              : 'Farmaco aggiornato e promemoria ricreati',
+        ),
+      ),
+    );
+  }
+
+  List<Reminder> _buildMedicationReminders({
+    required String medicationId,
+    required Pet pet,
+    required String medicationName,
+    required DateTime startDate,
+    required DateTime endDate,
     required List<MedicationReminderTime> reminderTimes,
-    required String prescribedBy,
     required String instructions,
     required String notes,
+    required String prescribedBy,
   }) {
-    final now = DateTime.now();
-    final startDay = _dateOnly(_startDate);
-    final maxScheduleEndDate = _dateOnly(
-      now.add(const Duration(days: _notificationSchedulingWindowDays)),
-    );
-
-    final requestedEndDay =
-        _endDate == null ? maxScheduleEndDate : _dateOnly(_endDate!);
-
-    final scheduleEndDay = requestedEndDay.isAfter(maxScheduleEndDate)
-        ? maxScheduleEndDate
-        : requestedEndDay;
-
     final reminders = <Reminder>[];
-    var currentDay = startDay;
+    final now = DateTime.now();
+    var currentDay = _dateOnly(startDate);
+    final lastDay = _dateOnly(endDate);
 
-    while (!currentDay.isAfter(scheduleEndDay)) {
+    while (!currentDay.isAfter(lastDay)) {
       for (final reminderTime in reminderTimes) {
         final scheduledAt = DateTime(
           currentDay.year,
@@ -498,26 +324,22 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
           reminderTime.minute,
         );
 
-        if (!scheduledAt.isAfter(now)) {
-          continue;
-        }
+        final id =
+            '$medicationId-${currentDay.year}${currentDay.month.toString().padLeft(2, '0')}${currentDay.day.toString().padLeft(2, '0')}-${reminderTime.storageKey.replaceAll(':', '')}';
 
         reminders.add(
           Reminder(
-            id: _automaticReminderId(
-              medicationId: medicationId,
-              scheduledAt: scheduledAt,
-              reminderTime: reminderTime,
-            ),
+            id: id,
             petId: pet.id,
             petName: pet.name,
             category: ReminderCategory.medication,
-            title: strings.reminderTitleFor(medicationName),
+            title: 'Farmaco: $medicationName',
             scheduledAt: scheduledAt,
-            status: ReminderStatus.active,
+            status: scheduledAt.isBefore(now)
+                ? ReminderStatus.skipped
+                : ReminderStatus.active,
             createdAt: now,
-            notes: _buildReminderNotes(
-              strings: strings,
+            notes: _reminderNotes(
               prescribedBy: prescribedBy,
               instructions: instructions,
               notes: notes,
@@ -533,211 +355,118 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     return reminders;
   }
 
-  String _automaticReminderId({
-    required String medicationId,
-    required DateTime scheduledAt,
-    required MedicationReminderTime reminderTime,
-  }) {
-    final dateKey =
-        '${scheduledAt.year}${scheduledAt.month.toString().padLeft(2, '0')}${scheduledAt.day.toString().padLeft(2, '0')}';
-
-    return '$medicationId-reminder-$dateKey-${reminderTime.storageKey}';
-  }
-
-  String? _buildReminderNotes({
-    required _MedicationStrings strings,
+  String? _reminderNotes({
     required String prescribedBy,
     required String instructions,
     required String notes,
   }) {
-    final lines = [
-      strings.reminderNoteHeader,
+    final lines = <String>[
+      'Promemoria automatico generato da una terapia farmacologica.',
     ];
 
-    if (prescribedBy.isNotEmpty) {
-      lines.add('${strings.prescribedByShort}: $prescribedBy');
+    if (prescribedBy.trim().isNotEmpty) {
+      lines.add('Veterinario: ${prescribedBy.trim()}');
     }
 
-    if (instructions.isNotEmpty) {
-      lines.add('${strings.instructionsShort}: $instructions');
+    if (instructions.trim().isNotEmpty) {
+      lines.add('Indicazioni: ${instructions.trim()}');
     }
 
-    if (notes.isNotEmpty) {
-      lines.add(notes);
+    if (notes.trim().isNotEmpty) {
+      lines.add(notes.trim());
     }
 
     return lines.join('\n');
   }
 
-  void _startEditing(MedicationEntry entry) {
-    setState(() {
-      _editingEntry = entry;
-      _nameController.text = entry.name;
-      _selectedStatus = entry.status;
-      _startDate = _dateOnly(entry.startDate);
-      _endDate = entry.endDate == null ? null : _dateOnly(entry.endDate!);
-      _prescribedByController.text = entry.prescribedBy ?? '';
-      _instructionsController.text = entry.instructions ?? '';
-      _notesController.text = entry.notes ?? '';
-
-      _reminderTimes = _sortAndDeduplicateTimes(
-        entry.reminderTimes
-            .map(
-              (reminderTime) => TimeOfDay(
-                hour: reminderTime.hour,
-                minute: reminderTime.minute,
-              ),
-            )
-            .toList(growable: false),
-      );
-
-      if (_reminderTimes.isEmpty) {
-        _reminderTimes = [TimeOfDay.now()];
-      }
-    });
-  }
-
-  void _cancelEditing() {
-    setState(_clearForm);
-  }
-
-  void _clearForm() {
-    _editingEntry = null;
-    _nameController.clear();
-    _prescribedByController.clear();
-    _instructionsController.clear();
-    _notesController.clear();
-
-    final nextDefaultDateTime = DateTime.now().add(const Duration(hours: 1));
-
-    _selectedStatus = MedicationStatus.active;
-
-    _startDate = DateTime(
-      nextDefaultDateTime.year,
-      nextDefaultDateTime.month,
-      nextDefaultDateTime.day,
-    );
-
-    _endDate = null;
-
-    _reminderTimes = [
-      TimeOfDay.fromDateTime(nextDefaultDateTime),
-    ];
-  }
-
-  Future<void> _setStatus(
+  Future<void> _markNextDoseTaken(
     MedicationEntry entry,
-    MedicationStatus status,
+    List<Reminder> reminders,
   ) async {
-    final updated = entry.copyWith(status: status);
+    final nextReminder = _nextPendingReminder(entry, reminders);
 
-    await ref.read(medicationControllerProvider.notifier).updateEntry(updated);
+    if (nextReminder == null) {
+      return;
+    }
+
+    await ref
+        .read(reminderControllerProvider.notifier)
+        .completeReminder(nextReminder.id);
 
     if (!mounted) {
       return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_MedicationStrings.of(context).entryUpdated)),
+      const SnackBar(content: Text('Assunzione segnata')),
     );
   }
 
-  Future<void> _confirmDelete(
+  Reminder? _nextPendingReminder(
     MedicationEntry entry,
-    _MedicationStrings strings,
-  ) async {
-    final shouldDelete = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(strings.deleteEntryTitle),
-          content: Text(strings.deleteEntryMessage),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(strings.cancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(strings.delete),
-            ),
-          ],
-        );
-      },
-    );
+    List<Reminder> reminders,
+  ) {
+    final ids = entry.automaticReminderIds.toSet();
 
-    if (shouldDelete != true || !mounted) {
-      return;
+    final candidates = reminders
+        .where(
+          (reminder) =>
+              ids.contains(reminder.id) &&
+              reminder.status != ReminderStatus.completed &&
+              !entry.takenReminderIds.contains(reminder.id),
+        )
+        .toList(growable: false);
+
+    candidates.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+
+    if (candidates.isEmpty) {
+      return null;
     }
+
+    return candidates.first;
+  }
+
+  Future<void> _suspend(MedicationEntry entry) async {
+    await ref.read(medicationControllerProvider.notifier).suspendEntry(entry.id);
+
+    await ref
+        .read(reminderControllerProvider.notifier)
+        .pauseMedicationReminders(entry.automaticReminderIds);
+  }
+
+  Future<void> _reinstate(MedicationEntry entry) async {
+    await ref
+        .read(medicationControllerProvider.notifier)
+        .reinstateEntry(entry.id);
+
+    await ref
+        .read(reminderControllerProvider.notifier)
+        .reinstateMedicationReminders(entry.automaticReminderIds);
+  }
+
+  Future<void> _deleteMedication(MedicationEntry entry) async {
+    await ref
+        .read(reminderControllerProvider.notifier)
+        .deleteReminders(entry.automaticReminderIds);
 
     await ref.read(medicationControllerProvider.notifier).deleteEntry(entry.id);
 
-    for (final reminderId in entry.automaticReminderIds) {
-      await ref
-          .read(reminderControllerProvider.notifier)
-          .deleteReminder(reminderId);
-    }
-
     if (!mounted) {
       return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(strings.entryDeleted)),
-    );
-  }
-
-  List<TimeOfDay> _sortAndDeduplicateTimes(List<TimeOfDay> times) {
-    final byKey = <String, TimeOfDay>{};
-
-    for (final time in times) {
-      byKey[_timeKey(time)] = time;
-    }
-
-    final deduplicated = byKey.values.toList(growable: false)
-      ..sort((a, b) {
-        final first = a.hour * 60 + a.minute;
-        final second = b.hour * 60 + b.minute;
-
-        return first.compareTo(second);
-      });
-
-    return deduplicated;
-  }
-
-  String _timeKey(TimeOfDay time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-  }
-
-  String _reminderTimeId(TimeOfDay time) {
-    return 'time-${time.hour.toString().padLeft(2, '0')}-${time.minute.toString().padLeft(2, '0')}';
-  }
-
-  void _scrollToForm() {
-    final contextToReveal = _formKey.currentContext;
-
-    if (contextToReveal == null) {
-      return;
-    }
-
-    Scrollable.ensureVisible(
-      contextToReveal,
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOutCubic,
+      const SnackBar(content: Text('Farmaco eliminato')),
     );
   }
 }
 
-class _TopBar extends StatelessWidget {
-  const _TopBar({
-    required this.title,
-    required this.subtitle,
+class _Header extends StatelessWidget {
+  const _Header({
     required this.onBack,
     required this.onAdd,
   });
 
-  final String title;
-  final String subtitle;
   final VoidCallback onBack;
   final VoidCallback onAdd;
 
@@ -755,19 +484,19 @@ class _TopBar extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                title,
+                'Farmaci',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontSize: 26,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -0.8,
-                      color: _MedicationPalette.darkText,
+                      color: _MedPalette.darkText,
                     ),
               ),
               const SizedBox(height: 1),
               Text(
-                subtitle,
+                'Terapie attive e storico',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: _MedicationPalette.secondaryText,
+                      color: _MedPalette.secondaryText,
                       fontWeight: FontWeight.w600,
                     ),
               ),
@@ -795,7 +524,7 @@ class _CircleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: _MedicationPalette.chip,
+      color: _MedPalette.chip,
       shape: const CircleBorder(),
       child: InkWell(
         onTap: onTap,
@@ -806,7 +535,7 @@ class _CircleButton extends StatelessWidget {
           child: Icon(
             icon,
             size: 20,
-            color: _MedicationPalette.darkText,
+            color: _MedPalette.darkText,
           ),
         ),
       ),
@@ -814,258 +543,334 @@ class _CircleButton extends StatelessWidget {
   }
 }
 
-class _MedicationTherapyCard extends StatelessWidget {
-  const _MedicationTherapyCard({
+class _FilterRow extends StatelessWidget {
+  const _FilterRow({
+    required this.filter,
+    required this.onChanged,
+  });
+
+  final _MedicationFilter filter;
+  final ValueChanged<_MedicationFilter> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _FilterChipButton(
+          label: 'Attive',
+          selected: filter == _MedicationFilter.active,
+          onTap: () => onChanged(_MedicationFilter.active),
+        ),
+        const SizedBox(width: 7),
+        _FilterChipButton(
+          label: 'Passate',
+          selected: filter == _MedicationFilter.past,
+          onTap: () => onChanged(_MedicationFilter.past),
+        ),
+        const SizedBox(width: 7),
+        _FilterChipButton(
+          label: 'Tutte',
+          selected: filter == _MedicationFilter.all,
+          onTap: () => onChanged(_MedicationFilter.all),
+        ),
+      ],
+    );
+  }
+}
+
+class _FilterChipButton extends StatelessWidget {
+  const _FilterChipButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final background = selected ? _MedPalette.darkText : _MedPalette.chip;
+    final foreground = selected ? Colors.white : _MedPalette.secondaryText;
+
+    return Material(
+      color: background,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  fontSize: 12,
+                  color: foreground,
+                  fontWeight: FontWeight.w900,
+                ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MedicationCard extends StatelessWidget {
+  const _MedicationCard({
     required this.entry,
     required this.pet,
-    required this.strings,
-    required this.onSkip,
-    required this.onMarkTaken,
+    required this.reminders,
+    required this.onSuspendOrReinstate,
     required this.onEdit,
+    required this.onTaken,
   });
 
   final MedicationEntry entry;
   final Pet pet;
-  final _MedicationStrings strings;
-  final VoidCallback onSkip;
-  final VoidCallback onMarkTaken;
+  final List<Reminder> reminders;
+  final VoidCallback onSuspendOrReinstate;
   final VoidCallback onEdit;
+  final VoidCallback onTaken;
 
   @override
   Widget build(BuildContext context) {
     final petColor = Color(pet.colorValue);
-    final accent = _accentForPet(petColor);
-    final progress = _therapyProgress(entry);
-    final isActive = entry.status == MedicationStatus.active;
+    final accent = _visibleAccent(petColor);
+    final total = entry.totalDoses;
+    final taken = entry.takenDoses;
+    final progress = total == 0 ? 0.0 : (taken / total).clamp(0.0, 1.0);
+    final remaining = math.max(0, total - taken);
+    final nextReminder = _nextReminder(entry, reminders);
+    final isPaused = entry.status == MedicationStatus.paused;
+    final isCompleted = entry.status == MedicationStatus.completed;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: _MedicationPalette.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _MedicationPalette.outline),
-        boxShadow: [
-          BoxShadow(
-            color: _MedicationPalette.darkText.withValues(alpha: 0.04),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _TherapyHeader(
-                    entry: entry,
-                    pet: pet,
-                    petColor: petColor,
-                    strings: strings,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    entry.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.2,
-                          color: _MedicationPalette.darkText,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _scheduleLine(context, entry, strings),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: _MedicationPalette.secondaryText,
-                          height: 1.25,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  if (entry.instructions != null &&
-                      entry.instructions!.trim().isNotEmpty) ...[
-                    const SizedBox(height: 7),
+    return Opacity(
+      opacity: isPaused ? 0.72 : 1,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: _MedPalette.card,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _MedPalette.outline),
+          boxShadow: [
+            BoxShadow(
+              color: _MedPalette.darkText.withValues(alpha: 0.04),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _CardHeader(
+                      entry: entry,
+                      pet: pet,
+                      petColor: petColor,
+                    ),
+                    const SizedBox(height: 10),
                     Text(
-                      entry.instructions!.trim(),
-                      maxLines: 2,
+                      entry.name,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.2,
+                            color: _MedPalette.darkText,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _subtitle(context, entry, nextReminder),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: _MedicationPalette.mutedText,
+                            color: _MedPalette.secondaryText,
                             height: 1.25,
-                            fontStyle: FontStyle.italic,
                             fontWeight: FontWeight.w700,
                           ),
                     ),
-                  ],
-                  if (entry.notes != null &&
-                      entry.notes!.trim().isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      entry.notes!.trim(),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: _MedicationPalette.secondaryText,
-                            height: 1.25,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      value: progress.value,
-                      minHeight: 5,
-                      color: accent,
-                      backgroundColor: _MedicationPalette.progressBackground,
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  Row(
-                    children: [
+                    if (entry.instructions != null &&
+                        entry.instructions!.trim().isNotEmpty) ...[
+                      const SizedBox(height: 7),
                       Text(
-                        progress.leftLabel,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: _MedicationPalette.mutedText,
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        progress.rightLabel,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: _MedicationPalette.mutedText,
+                        entry.instructions!.trim(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: _MedPalette.mutedText,
+                              height: 1.25,
+                              fontStyle: FontStyle.italic,
                               fontWeight: FontWeight.w700,
                             ),
                       ),
                     ],
-                  ),
-                ],
+                    if (entry.notes != null &&
+                        entry.notes!.trim().isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        entry.notes!.trim(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: _MedPalette.secondaryText,
+                              height: 1.25,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 5,
+                        color: accent,
+                        backgroundColor: _MedPalette.progressBackground,
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    Row(
+                      children: [
+                        Text(
+                          '$taken di $total prese',
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: _MedPalette.mutedText,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          isCompleted
+                              ? 'cura completata'
+                              : '$remaining rimaste',
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: _MedPalette.mutedText,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const Divider(height: 1, color: _MedicationPalette.outline),
-            SizedBox(
-              height: 42,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _TherapyActionButton(
-                      label: strings.skip,
-                      onTap: isActive ? onSkip : null,
+              const Divider(height: 1, color: _MedPalette.outline),
+              SizedBox(
+                height: 42,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _ActionButton(
+                        label: isPaused ? 'Reintegra' : 'Sospendi',
+                        onTap: isCompleted ? null : onSuspendOrReinstate,
+                      ),
                     ),
-                  ),
-                  const VerticalDivider(
-                    width: 1,
-                    color: _MedicationPalette.outline,
-                  ),
-                  Expanded(
-                    child: _TherapyActionButton(
-                      label: strings.edit,
-                      icon: Icons.edit_outlined,
-                      onTap: onEdit,
+                    const VerticalDivider(
+                      width: 1,
+                      color: _MedPalette.outline,
                     ),
-                  ),
-                  const VerticalDivider(
-                    width: 1,
-                    color: _MedicationPalette.outline,
-                  ),
-                  Expanded(
-                    child: _TherapyActionButton(
-                      label: strings.markTaken,
-                      icon: Icons.check_rounded,
-                      accent: accent,
-                      onTap: isActive ? onMarkTaken : null,
+                    Expanded(
+                      child: _ActionButton(
+                        label: 'Modifica',
+                        onTap: onEdit,
+                      ),
                     ),
-                  ),
-                ],
+                    const VerticalDivider(
+                      width: 1,
+                      color: _MedPalette.outline,
+                    ),
+                    Expanded(
+                      child: _ActionButton(
+                        label: 'Segna presa',
+                        icon: Icons.check_rounded,
+                        accent: accent,
+                        onTap: isPaused || isCompleted || nextReminder == null
+                            ? null
+                            : onTaken,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Color _accentForPet(Color petColor) {
-    if (petColor.computeLuminance() > 0.70) {
+  Reminder? _nextReminder(MedicationEntry entry, List<Reminder> reminders) {
+    final ids = entry.automaticReminderIds.toSet();
+
+    final pending = reminders
+        .where(
+          (reminder) =>
+              ids.contains(reminder.id) &&
+              reminder.status != ReminderStatus.completed &&
+              !entry.takenReminderIds.contains(reminder.id),
+        )
+        .toList(growable: false);
+
+    pending.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+
+    if (pending.isEmpty) {
+      return null;
+    }
+
+    return pending.first;
+  }
+
+  String _subtitle(
+    BuildContext context,
+    MedicationEntry entry,
+    Reminder? nextReminder,
+  ) {
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final dose = entry.dosage?.trim().isNotEmpty == true
+        ? entry.dosage!.trim()
+        : '1 compressa';
+
+    if (nextReminder != null) {
+      final date = DateFormat('d MMM', locale).format(nextReminder.scheduledAt);
+      final time = DateFormat.Hm(locale).format(nextReminder.scheduledAt);
+      return '$dose · prossima $date alle $time';
+    }
+
+    final start = DateFormat('d MMM', locale).format(entry.startDate);
+    final end = entry.endDate == null
+        ? 'fine non impostata'
+        : DateFormat('d MMM', locale).format(entry.endDate!);
+
+    return '$dose · dal $start al $end';
+  }
+
+  Color _visibleAccent(Color petColor) {
+    if (petColor.computeLuminance() > 0.72) {
       return const Color(0xFFF3A83B);
     }
 
     return petColor;
   }
-
-  String _scheduleLine(
-    BuildContext context,
-    MedicationEntry entry,
-    _MedicationStrings strings,
-  ) {
-    final locale = Localizations.localeOf(context).toLanguageTag();
-    final times = entry.reminderTimes.isEmpty
-        ? strings.noReminderTimes
-        : entry.reminderTimes
-            .map(
-              (time) => _formatHourMinute(time.hour, time.minute),
-            )
-            .join(', ');
-
-    final start = DateFormat('d MMM', locale).format(entry.startDate);
-    final end = entry.endDate == null
-        ? strings.noEndDateShort
-        : DateFormat('d MMM', locale).format(entry.endDate!);
-
-    return '$times · ${strings.fromDate} $start ${strings.toDate} $end';
-  }
-
-  _TherapyProgress _therapyProgress(MedicationEntry entry) {
-    final start = _dateOnly(entry.startDate);
-    final today = _dateOnly(DateTime.now());
-
-    if (entry.endDate == null) {
-      final days = today.difference(start).inDays + 1;
-      final normalized = (days / 30).clamp(0.08, 1.0);
-
-      return _TherapyProgress(
-        value: normalized,
-        leftLabel: '${strings.day} ${days < 1 ? 1 : days}',
-        rightLabel: strings.activeTherapy,
-      );
-    }
-
-    final end = _dateOnly(entry.endDate!);
-    final totalDays = end.difference(start).inDays + 1;
-    final elapsedDays = today.difference(start).inDays + 1;
-    final remainingDays = end.difference(today).inDays.clamp(0, totalDays);
-
-    final safeTotal = totalDays <= 0 ? 1 : totalDays;
-    final safeElapsed = elapsedDays.clamp(1, safeTotal);
-
-    return _TherapyProgress(
-      value: safeElapsed / safeTotal,
-      leftLabel: '${strings.day} $safeElapsed ${strings.ofText} $safeTotal',
-      rightLabel: '$remainingDays ${strings.daysRemaining}',
-    );
-  }
 }
 
-class _TherapyHeader extends StatelessWidget {
-  const _TherapyHeader({
+class _CardHeader extends StatelessWidget {
+  const _CardHeader({
     required this.entry,
     required this.pet,
     required this.petColor,
-    required this.strings,
   });
 
   final MedicationEntry entry;
   final Pet pet;
   final Color petColor;
-  final _MedicationStrings strings;
 
   @override
   Widget build(BuildContext context) {
@@ -1103,24 +908,32 @@ class _TherapyHeader extends StatelessWidget {
         ),
         if (prescribedBy != null && prescribedBy.isNotEmpty) ...[
           const SizedBox(width: 10),
-          Flexible(
+          Expanded(
             child: Text(
               prescribedBy,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: _MedicationPalette.mutedText,
+                    color: _MedPalette.mutedText,
                     fontWeight: FontWeight.w900,
                   ),
             ),
           ),
-        ],
-        const Spacer(),
-        if (entry.status != MedicationStatus.active)
+        ] else
+          const Spacer(),
+        if (entry.status == MedicationStatus.paused)
           Text(
-            strings.statusLabelFor(entry.status),
+            'Sospesa',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: _MedicationPalette.mutedText,
+                  color: _MedPalette.warningIcon,
+                  fontWeight: FontWeight.w900,
+                ),
+          ),
+        if (entry.status == MedicationStatus.completed)
+          Text(
+            'Completata',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: _MedPalette.mutedText,
                   fontWeight: FontWeight.w900,
                 ),
           ),
@@ -1129,8 +942,8 @@ class _TherapyHeader extends StatelessWidget {
   }
 }
 
-class _TherapyActionButton extends StatelessWidget {
-  const _TherapyActionButton({
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
     required this.label,
     required this.onTap,
     this.icon,
@@ -1145,8 +958,8 @@ class _TherapyActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = onTap == null
-        ? _MedicationPalette.mutedText
-        : accent ?? _MedicationPalette.secondaryText;
+        ? _MedPalette.mutedText
+        : accent ?? _MedPalette.secondaryText;
 
     return Material(
       color: Colors.transparent,
@@ -1184,19 +997,15 @@ class _TherapyActionButton extends StatelessWidget {
 }
 
 class _DisclaimerCard extends StatelessWidget {
-  const _DisclaimerCard({
-    required this.strings,
-  });
-
-  final _MedicationStrings strings;
+  const _DisclaimerCard();
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: _MedicationPalette.warningBackground,
+        color: _MedPalette.warningBackground,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _MedicationPalette.warningBorder),
+        border: Border.all(color: _MedPalette.warningBorder),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
@@ -1207,7 +1016,7 @@ class _DisclaimerCard extends StatelessWidget {
               width: 18,
               height: 18,
               decoration: const BoxDecoration(
-                color: _MedicationPalette.warningIcon,
+                color: _MedPalette.warningIcon,
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -1219,9 +1028,9 @@ class _DisclaimerCard extends StatelessWidget {
             const SizedBox(width: 9),
             Expanded(
               child: Text(
-                strings.disclaimer,
+                'Pet Life ti aiuta a ricordare le terapie. Dosi, durata e farmaci li decide solo il veterinario.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: _MedicationPalette.warningText,
+                      color: _MedPalette.warningText,
                       height: 1.25,
                       fontWeight: FontWeight.w700,
                     ),
@@ -1234,205 +1043,425 @@ class _DisclaimerCard extends StatelessWidget {
   }
 }
 
-class _MedicationFormCard extends StatelessWidget {
-  const _MedicationFormCard({
-    required this.formKey,
-    required this.nameController,
-    required this.prescribedByController,
-    required this.instructionsController,
-    required this.notesController,
-    required this.selectedStatus,
-    required this.startDate,
-    required this.endDate,
-    required this.reminderTimes,
-    required this.strings,
-    required this.isSaving,
-    required this.isEditing,
-    required this.onStatusChanged,
-    required this.onSelectStartDate,
-    required this.onSelectEndDate,
-    required this.onClearEndDate,
-    required this.onAddReminderTime,
-    required this.onEditReminderTime,
-    required this.onRemoveReminderTime,
-    required this.onSave,
-    required this.onCancelEditing,
+class _MedicationEditorSheet extends StatefulWidget {
+  const _MedicationEditorSheet({
+    required this.pet,
+    this.entry,
   });
 
-  final GlobalKey<FormState> formKey;
-  final TextEditingController nameController;
-  final TextEditingController prescribedByController;
-  final TextEditingController instructionsController;
-  final TextEditingController notesController;
-  final MedicationStatus selectedStatus;
-  final DateTime startDate;
-  final DateTime? endDate;
-  final List<TimeOfDay> reminderTimes;
-  final _MedicationStrings strings;
-  final bool isSaving;
-  final bool isEditing;
-  final ValueChanged<MedicationStatus?> onStatusChanged;
-  final VoidCallback onSelectStartDate;
-  final VoidCallback onSelectEndDate;
-  final VoidCallback onClearEndDate;
-  final VoidCallback onAddReminderTime;
-  final ValueChanged<int> onEditReminderTime;
-  final ValueChanged<int> onRemoveReminderTime;
-  final VoidCallback onSave;
-  final VoidCallback onCancelEditing;
+  final Pet pet;
+  final MedicationEntry? entry;
+
+  @override
+  State<_MedicationEditorSheet> createState() => _MedicationEditorSheetState();
+}
+
+class _MedicationEditorSheetState extends State<_MedicationEditorSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _dosageController;
+  late final TextEditingController _prescribedByController;
+  late final TextEditingController _instructionsController;
+  late final TextEditingController _notesController;
+
+  late DateTime _startDate;
+  late DateTime _endDate;
+  late List<TimeOfDay> _times;
+
+  bool get _isEditing => widget.entry != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final entry = widget.entry;
+    final now = DateTime.now();
+
+    _nameController = TextEditingController(text: entry?.name ?? '');
+    _dosageController = TextEditingController(text: entry?.dosage ?? '1 compressa');
+    _prescribedByController = TextEditingController(text: entry?.prescribedBy ?? '');
+    _instructionsController = TextEditingController(text: entry?.instructions ?? '');
+    _notesController = TextEditingController(text: entry?.notes ?? '');
+
+    _startDate = entry?.startDate ?? _dateOnly(now);
+    _endDate = entry?.endDate ?? _dateOnly(now.add(const Duration(days: 6)));
+
+    _times = entry == null
+        ? [
+            TimeOfDay(
+              hour: now.add(const Duration(hours: 1)).hour,
+              minute: 0,
+            ),
+          ]
+        : entry.reminderTimes
+            .map(
+              (time) => TimeOfDay(
+                hour: time.hour,
+                minute: time.minute,
+              ),
+            )
+            .toList(growable: false);
+
+    if (_times.isEmpty) {
+      _times = const [TimeOfDay(hour: 9, minute: 0)];
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _dosageController.dispose();
+    _prescribedByController.dispose();
+    _instructionsController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: _MedPalette.background,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.88,
+        ),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(22, 18, 22, 24),
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _isEditing ? 'Modifica farmaco' : 'Nuovo farmaco',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: _MedPalette.darkText,
+                        ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Pet Life crea promemoria giornalieri automatici per questi orari. Serve solo a ricordare informazioni inserite da te.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: _MedPalette.secondaryText,
+                    height: 1.3,
+                  ),
+            ),
+            const SizedBox(height: 18),
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Nome farmaco',
+                      hintText: 'Es. Gabapentin 50 mg',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if ((value ?? '').trim().isEmpty) {
+                        return 'Inserisci il nome del farmaco';
+                      }
+
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _dosageController,
+                    decoration: const InputDecoration(
+                      labelText: 'Quantità / nota assunzione',
+                      hintText: 'Es. 1 compressa',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _prescribedByController,
+                    decoration: const InputDecoration(
+                      labelText: 'Veterinario / prescrittore',
+                      hintText: 'Opzionale',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _instructionsController,
+                    minLines: 2,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: 'Indicazioni del veterinario',
+                      hintText: 'Es. Dopo i pasti',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _notesController,
+                    minLines: 2,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: 'Note',
+                      hintText: 'Opzionale',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: _DateSelector(
+                    label: 'Inizio',
+                    date: _startDate,
+                    onTap: () => _selectDate(isStart: true),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _DateSelector(
+                    label: 'Fine',
+                    date: _endDate,
+                    onTap: () => _selectDate(isStart: false),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            _TimesEditor(
+              times: _times,
+              onAdd: _addTime,
+              onEdit: _editTime,
+              onRemove: _removeTime,
+            ),
+            const SizedBox(height: 18),
+            FilledButton.icon(
+              onPressed: _save,
+              icon: const Icon(Icons.check_rounded),
+              label: Text(_isEditing ? 'Aggiorna farmaco' : 'Salva farmaco'),
+            ),
+            if (_isEditing) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _delete,
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Elimina cura'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _selectDate({
+    required bool isStart,
+  }) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: isStart ? _startDate : _endDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
+    );
+
+    if (picked == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      if (isStart) {
+        _startDate = _dateOnly(picked);
+
+        if (_endDate.isBefore(_startDate)) {
+          _endDate = _startDate;
+        }
+      } else {
+        _endDate = _dateOnly(picked);
+
+        if (_endDate.isBefore(_startDate)) {
+          _startDate = _endDate;
+        }
+      }
+    });
+  }
+
+  Future<void> _addTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _times.isEmpty ? const TimeOfDay(hour: 9, minute: 0) : _times.last,
+    );
+
+    if (picked == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _times = _sortTimes([..._times, picked]);
+    });
+  }
+
+  Future<void> _editTime(int index) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _times[index],
+    );
+
+    if (picked == null || !mounted) {
+      return;
+    }
+
+    final updated = [..._times];
+    updated[index] = picked;
+
+    setState(() {
+      _times = _sortTimes(updated);
+    });
+  }
+
+  void _removeTime(int index) {
+    if (_times.length == 1) {
+      return;
+    }
+
+    final updated = [..._times]..removeAt(index);
+
+    setState(() {
+      _times = _sortTimes(updated);
+    });
+  }
+
+  List<TimeOfDay> _sortTimes(List<TimeOfDay> times) {
+    final byKey = <String, TimeOfDay>{};
+
+    for (final time in times) {
+      final key =
+          '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+      byKey[key] = time;
+    }
+
+    final sorted = byKey.values.toList(growable: false);
+
+    sorted.sort((a, b) {
+      final first = a.hour * 60 + a.minute;
+      final second = b.hour * 60 + b.minute;
+      return first.compareTo(second);
+    });
+
+    return sorted;
+  }
+
+  void _save() {
+    final isValid = _formKey.currentState?.validate() ?? false;
+
+    if (!isValid) {
+      return;
+    }
+
+    Navigator.of(context).pop(
+      _MedicationEditorResult.save(
+        _MedicationDraft(
+          name: _nameController.text.trim(),
+          dosage: _dosageController.text.trim(),
+          prescribedBy: _prescribedByController.text.trim(),
+          instructions: _instructionsController.text.trim(),
+          notes: _notesController.text.trim(),
+          startDate: _startDate,
+          endDate: _endDate,
+          reminderTimes: _times,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _delete() async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Eliminare questo farmaco?'),
+          content: const Text(
+            'La cura e i promemoria collegati verranno rimossi.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Annulla'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Elimina'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete == true && mounted) {
+      Navigator.of(context).pop(_MedicationEditorResult.delete());
+    }
+  }
+}
+
+class _DateSelector extends StatelessWidget {
+  const _DateSelector({
+    required this.label,
+    required this.date,
+    required this.onTap,
+  });
+
+  final String label;
+  final DateTime date;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context).toLanguageTag();
-    final startDateLabel = DateFormat.yMMMd(locale).format(startDate);
-    final endDateLabel =
-        endDate == null ? strings.noEndDate : DateFormat.yMMMd(locale).format(endDate!);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: _MedicationPalette.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _MedicationPalette.outline),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: formKey,
+    return Material(
+      color: _MedPalette.card,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(color: _MedPalette.outline),
+            borderRadius: BorderRadius.circular(14),
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                isEditing ? strings.editEntry : strings.addEntry,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: _MedicationPalette.darkText,
+                label,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: _MedPalette.secondaryText,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                DateFormat('d MMM yyyy', locale).format(date),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: _MedPalette.darkText,
                       fontWeight: FontWeight.w900,
                     ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                strings.automaticReminderNote,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: _MedicationPalette.secondaryText,
-                      height: 1.25,
-                    ),
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: strings.medicationNameLabel,
-                  hintText: strings.medicationNameHint,
-                  border: const OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  final text = value?.trim() ?? '';
-
-                  if (text.isEmpty) {
-                    return strings.medicationNameRequired;
-                  }
-
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: prescribedByController,
-                decoration: InputDecoration(
-                  labelText: strings.prescribedByLabel,
-                  hintText: strings.prescribedByHint,
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: instructionsController,
-                decoration: InputDecoration(
-                  labelText: strings.instructionsLabel,
-                  hintText: strings.instructionsHint,
-                  border: const OutlineInputBorder(),
-                ),
-                minLines: 2,
-                maxLines: 4,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: notesController,
-                decoration: InputDecoration(
-                  labelText: strings.notesLabel,
-                  hintText: strings.notesHint,
-                  border: const OutlineInputBorder(),
-                ),
-                minLines: 2,
-                maxLines: 4,
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<MedicationStatus>(
-                initialValue: selectedStatus,
-                decoration: InputDecoration(
-                  labelText: strings.statusLabel,
-                  border: const OutlineInputBorder(),
-                ),
-                items: MedicationStatus.values
-                    .map(
-                      (status) => DropdownMenuItem(
-                        value: status,
-                        child: Text(strings.statusLabelFor(status)),
-                      ),
-                    )
-                    .toList(growable: false),
-                onChanged: onStatusChanged,
-              ),
-              const SizedBox(height: 12),
-              _DateButton(
-                label: '${strings.startDate}: $startDateLabel',
-                icon: Icons.event_outlined,
-                onTap: onSelectStartDate,
-              ),
-              const SizedBox(height: 10),
-              _DateButton(
-                label: '${strings.endDate}: $endDateLabel',
-                icon: Icons.event_available_outlined,
-                onTap: onSelectEndDate,
-              ),
-              if (endDate != null) ...[
-                const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: onClearEndDate,
-                    icon: const Icon(Icons.close_outlined),
-                    label: Text(strings.clearEndDate),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              _ReminderTimesEditor(
-                reminderTimes: reminderTimes,
-                strings: strings,
-                onAdd: onAddReminderTime,
-                onEdit: onEditReminderTime,
-                onRemove: onRemoveReminderTime,
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: isSaving ? null : onSave,
-                icon: isSaving
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.save_outlined),
-                label: Text(
-                  isEditing ? strings.updateEntry : strings.saveEntry,
-                ),
-              ),
-              if (isEditing) ...[
-                const SizedBox(height: 8),
-                OutlinedButton(
-                  onPressed: onCancelEditing,
-                  child: Text(strings.cancelEditing),
-                ),
-              ],
             ],
           ),
         ),
@@ -1441,38 +1470,15 @@ class _MedicationFormCard extends StatelessWidget {
   }
 }
 
-class _DateButton extends StatelessWidget {
-  const _DateButton({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon),
-      label: Text(label),
-    );
-  }
-}
-
-class _ReminderTimesEditor extends StatelessWidget {
-  const _ReminderTimesEditor({
-    required this.reminderTimes,
-    required this.strings,
+class _TimesEditor extends StatelessWidget {
+  const _TimesEditor({
+    required this.times,
     required this.onAdd,
     required this.onEdit,
     required this.onRemove,
   });
 
-  final List<TimeOfDay> reminderTimes;
-  final _MedicationStrings strings;
+  final List<TimeOfDay> times;
   final VoidCallback onAdd;
   final ValueChanged<int> onEdit;
   final ValueChanged<int> onRemove;
@@ -1481,232 +1487,93 @@ class _ReminderTimesEditor extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: _MedicationPalette.background,
+        color: _MedPalette.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _MedicationPalette.outline),
+        border: Border.all(color: _MedPalette.outline),
       ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              strings.reminderTimesTitle,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: _MedicationPalette.darkText,
-                    fontWeight: FontWeight.w900,
-                  ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              strings.reminderTimesDescription,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: _MedicationPalette.secondaryText,
-                    height: 1.25,
-                  ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (var index = 0; index < reminderTimes.length; index++)
-                  _ReminderTimeChip(
-                    label: reminderTimes[index].format(context),
-                    canRemove: reminderTimes.length > 1,
-                    onTap: () => onEdit(index),
-                    onRemove: () => onRemove(index),
-                  ),
-                ActionChip(
-                  avatar: const Icon(Icons.add_rounded, size: 18),
-                  label: Text(strings.addTime),
-                  onPressed: onAdd,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ReminderTimeChip extends StatelessWidget {
-  const _ReminderTimeChip({
-    required this.label,
-    required this.canRemove,
-    required this.onTap,
-    required this.onRemove,
-  });
-
-  final String label;
-  final bool canRemove;
-  final VoidCallback onTap;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    return InputChip(
-      label: Text(label),
-      avatar: const Icon(Icons.notifications_active_outlined, size: 18),
-      onPressed: onTap,
-      onDeleted: canRemove ? onRemove : null,
-    );
-  }
-}
-
-class _EmptyMedicationCard extends StatelessWidget {
-  const _EmptyMedicationCard({
-    required this.strings,
-  });
-
-  final _MedicationStrings strings;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _MedicationPalette.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _MedicationPalette.outline),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          children: [
-            const Icon(
-              Icons.medication_outlined,
-              size: 42,
-              color: _MedicationPalette.secondaryText,
-            ),
-            const SizedBox(height: 14),
-            Text(
-              strings.emptyTitle,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: _MedicationPalette.darkText,
-                    fontWeight: FontWeight.w900,
-                  ),
-            ),
-            const SizedBox(height: 7),
-            Text(
-              strings.emptyDescription,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: _MedicationPalette.secondaryText,
-                    height: 1.3,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DangerDeleteArea extends StatelessWidget {
-  const _DangerDeleteArea({
-    required this.entries,
-    required this.strings,
-    required this.onDelete,
-  });
-
-  final List<MedicationEntry> entries;
-  final _MedicationStrings strings;
-  final ValueChanged<MedicationEntry> onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _MedicationPalette.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _MedicationPalette.outline),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 6, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              strings.manageEntries,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: _MedicationPalette.secondaryText,
-                    fontWeight: FontWeight.w900,
-                  ),
-            ),
-            const SizedBox(height: 4),
-            ...entries.map(
-              (entry) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(
-                  '${entry.name} · ${strings.statusLabelFor(entry.status)}',
-                ),
-                trailing: IconButton(
-                  tooltip: strings.delete,
-                  onPressed: () => onDelete(entry),
-                  icon: const Icon(Icons.delete_outline),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.title,
-    required this.count,
-  });
-
-  final String title;
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Orari giornalieri',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: _MedicationPalette.darkText,
+                  color: _MedPalette.darkText,
                   fontWeight: FontWeight.w900,
                 ),
           ),
-        ),
-        Text(
-          count.toString(),
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: _MedicationPalette.secondaryText,
-                fontWeight: FontWeight.w800,
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (var index = 0; index < times.length; index++)
+                InputChip(
+                  label: Text(times[index].format(context)),
+                  avatar: const Icon(
+                    Icons.notifications_active_outlined,
+                    size: 18,
+                  ),
+                  onPressed: () => onEdit(index),
+                  onDeleted: times.length == 1 ? null : () => onRemove(index),
+                ),
+              ActionChip(
+                avatar: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Aggiungi orario'),
+                onPressed: onAdd,
               ),
-        ),
-      ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _PetNotFoundState extends StatelessWidget {
-  const _PetNotFoundState({
-    required this.strings,
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({
+    required this.title,
+    required this.description,
   });
 
-  final _MedicationStrings strings;
+  final String title;
+  final String description;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(
-          strings.petNotFound,
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: _MedicationPalette.darkText),
-        ),
+    return Container(
+      decoration: BoxDecoration(
+        color: _MedPalette.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _MedPalette.outline),
+      ),
+      padding: const EdgeInsets.all(22),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.medication_outlined,
+            size: 42,
+            color: _MedPalette.secondaryText,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: _MedPalette.darkText,
+                  fontWeight: FontWeight.w900,
+                ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            description,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: _MedPalette.secondaryText,
+                  height: 1.3,
+                ),
+          ),
+        ],
       ),
     );
   }
@@ -1727,27 +1594,65 @@ class _ErrorState extends StatelessWidget {
         child: Text(
           error.toString(),
           textAlign: TextAlign.center,
-          style: const TextStyle(color: _MedicationPalette.darkText),
+          style: const TextStyle(color: _MedPalette.darkText),
         ),
       ),
     );
   }
 }
 
-class _TherapyProgress {
-  const _TherapyProgress({
-    required this.value,
-    required this.leftLabel,
-    required this.rightLabel,
+class _MedicationDraft {
+  const _MedicationDraft({
+    required this.name,
+    required this.dosage,
+    required this.prescribedBy,
+    required this.instructions,
+    required this.notes,
+    required this.startDate,
+    required this.endDate,
+    required this.reminderTimes,
   });
 
-  final double value;
-  final String leftLabel;
-  final String rightLabel;
+  final String name;
+  final String dosage;
+  final String prescribedBy;
+  final String instructions;
+  final String notes;
+  final DateTime startDate;
+  final DateTime endDate;
+  final List<TimeOfDay> reminderTimes;
 }
 
-class _MedicationPalette {
-  const _MedicationPalette._();
+enum _MedicationEditorAction {
+  save,
+  delete,
+}
+
+class _MedicationEditorResult {
+  const _MedicationEditorResult._({
+    required this.action,
+    this.draft,
+  });
+
+  factory _MedicationEditorResult.save(_MedicationDraft draft) {
+    return _MedicationEditorResult._(
+      action: _MedicationEditorAction.save,
+      draft: draft,
+    );
+  }
+
+  factory _MedicationEditorResult.delete() {
+    return const _MedicationEditorResult._(
+      action: _MedicationEditorAction.delete,
+    );
+  }
+
+  final _MedicationEditorAction action;
+  final _MedicationDraft? draft;
+}
+
+class _MedPalette {
+  const _MedPalette._();
 
   static const background = Color(0xFFF8F1E2);
   static const card = Color(0xFFFFFFFF);
@@ -1763,291 +1668,6 @@ class _MedicationPalette {
   static const warningBorder = Color(0xFFF2C7A4);
   static const warningIcon = Color(0xFFE4773D);
   static const warningText = Color(0xFF8A5E41);
-}
-
-class _MedicationStrings {
-  const _MedicationStrings({
-    required this.medicationsTitle,
-    required this.medicationsSubtitle,
-    required this.inProgress,
-    required this.history,
-    required this.addEntry,
-    required this.editEntry,
-    required this.medicationNameLabel,
-    required this.medicationNameHint,
-    required this.medicationNameRequired,
-    required this.statusLabel,
-    required this.statusActive,
-    required this.statusCompleted,
-    required this.statusPaused,
-    required this.startDate,
-    required this.endDate,
-    required this.fromDate,
-    required this.toDate,
-    required this.noEndDate,
-    required this.noEndDateShort,
-    required this.clearEndDate,
-    required this.prescribedByLabel,
-    required this.prescribedByHint,
-    required this.prescribedByShort,
-    required this.instructionsLabel,
-    required this.instructionsHint,
-    required this.instructionsShort,
-    required this.notesLabel,
-    required this.notesHint,
-    required this.reminderTimesTitle,
-    required this.reminderTimesDescription,
-    required this.addTime,
-    required this.noReminderTimes,
-    required this.reminderTimesRequired,
-    required this.reminderMustHaveFutureOccurrence,
-    required this.automaticReminderNote,
-    required this.saveEntry,
-    required this.updateEntry,
-    required this.cancelEditing,
-    required this.entrySavedWithReminders,
-    required this.entryUpdatedWithReminders,
-    required this.entryUpdated,
-    required this.emptyTitle,
-    required this.emptyDescription,
-    required this.manageEntries,
-    required this.deleteEntryTitle,
-    required this.deleteEntryMessage,
-    required this.entryDeleted,
-    required this.delete,
-    required this.cancel,
-    required this.petNotFound,
-    required this.disclaimer,
-    required this.reminderNoteHeader,
-    required this.skip,
-    required this.edit,
-    required this.markTaken,
-    required this.day,
-    required this.ofText,
-    required this.daysRemaining,
-    required this.activeTherapy,
-  });
-
-  final String medicationsTitle;
-  final String medicationsSubtitle;
-  final String inProgress;
-  final String history;
-  final String addEntry;
-  final String editEntry;
-  final String medicationNameLabel;
-  final String medicationNameHint;
-  final String medicationNameRequired;
-  final String statusLabel;
-  final String statusActive;
-  final String statusCompleted;
-  final String statusPaused;
-  final String startDate;
-  final String endDate;
-  final String fromDate;
-  final String toDate;
-  final String noEndDate;
-  final String noEndDateShort;
-  final String clearEndDate;
-  final String prescribedByLabel;
-  final String prescribedByHint;
-  final String prescribedByShort;
-  final String instructionsLabel;
-  final String instructionsHint;
-  final String instructionsShort;
-  final String notesLabel;
-  final String notesHint;
-  final String reminderTimesTitle;
-  final String reminderTimesDescription;
-  final String addTime;
-  final String noReminderTimes;
-  final String reminderTimesRequired;
-  final String reminderMustHaveFutureOccurrence;
-  final String automaticReminderNote;
-  final String saveEntry;
-  final String updateEntry;
-  final String cancelEditing;
-  final String entrySavedWithReminders;
-  final String entryUpdatedWithReminders;
-  final String entryUpdated;
-  final String emptyTitle;
-  final String emptyDescription;
-  final String manageEntries;
-  final String deleteEntryTitle;
-  final String deleteEntryMessage;
-  final String entryDeleted;
-  final String delete;
-  final String cancel;
-  final String petNotFound;
-  final String disclaimer;
-  final String reminderNoteHeader;
-  final String skip;
-  final String edit;
-  final String markTaken;
-  final String day;
-  final String ofText;
-  final String daysRemaining;
-  final String activeTherapy;
-
-  String statusLabelFor(MedicationStatus status) {
-    return switch (status) {
-      MedicationStatus.active => statusActive,
-      MedicationStatus.completed => statusCompleted,
-      MedicationStatus.paused => statusPaused,
-    };
-  }
-
-  String reminderTitleFor(String medicationName) {
-    return 'Farmaco: $medicationName';
-  }
-
-  static _MedicationStrings of(BuildContext context) {
-    final languageCode = Localizations.localeOf(context).languageCode;
-
-    if (languageCode == 'en') {
-      return const _MedicationStrings(
-        medicationsTitle: 'Medications',
-        medicationsSubtitle: 'Active therapies and history',
-        inProgress: 'In progress',
-        history: 'History',
-        addEntry: 'Add medication',
-        editEntry: 'Edit medication',
-        medicationNameLabel: 'Medication name',
-        medicationNameHint: 'E.g. antibiotic',
-        medicationNameRequired: 'Enter the medication name',
-        statusLabel: 'Status',
-        statusActive: 'Active',
-        statusCompleted: 'Completed',
-        statusPaused: 'Paused',
-        startDate: 'Start date',
-        endDate: 'End date',
-        fromDate: 'from',
-        toDate: 'to',
-        noEndDate: 'Not set',
-        noEndDateShort: 'not set',
-        clearEndDate: 'Clear end date',
-        prescribedByLabel: 'Veterinarian / prescriber',
-        prescribedByHint: 'Optional',
-        prescribedByShort: 'Vet',
-        instructionsLabel: 'Veterinarian instructions',
-        instructionsHint:
-            'Optional. Enter only instructions provided by your veterinarian.',
-        instructionsShort: 'Instructions',
-        notesLabel: 'Notes',
-        notesHint: 'Optional',
-        reminderTimesTitle: 'Daily reminder times',
-        reminderTimesDescription:
-            'Set one or more daily times for personal alerts.',
-        addTime: 'Add time',
-        noReminderTimes: 'No times',
-        reminderTimesRequired: 'Add at least one reminder time',
-        reminderMustHaveFutureOccurrence:
-            'Set at least one future reminder occurrence',
-        automaticReminderNote:
-            'Pet Life crea promemoria giornalieri automatici per questi orari. Serve solo a ricordare informazioni inserite da te.',
-        saveEntry: 'Save medication',
-        updateEntry: 'Update medication',
-        cancelEditing: 'Cancel editing',
-        entrySavedWithReminders: 'Medication saved and reminders created',
-        entryUpdatedWithReminders: 'Medication updated and reminders recreated',
-        entryUpdated: 'Medication updated',
-        emptyTitle: 'No medications',
-        emptyDescription:
-            'Add medications only as a personal record of information provided by your veterinarian.',
-        manageEntries: 'Manage entries',
-        deleteEntryTitle: 'Delete this medication?',
-        deleteEntryMessage:
-            'This removes the medication entry and its automatic reminders.',
-        entryDeleted: 'Medication deleted',
-        delete: 'Delete',
-        cancel: 'Cancel',
-        petNotFound: 'Pet not found',
-        disclaimer:
-            'Pet Life helps you remember therapies. Dosage, duration and medication are decided only by your veterinarian. Pet Life does not prescribe medications, suggest treatments or calculate dosages.',
-        reminderNoteHeader:
-            'Automatic reminder generated from a medication therapy.',
-        skip: 'Skip',
-        edit: 'Edit',
-        markTaken: 'Mark taken',
-        day: 'Day',
-        ofText: 'of',
-        daysRemaining: 'days left',
-        activeTherapy: 'active therapy',
-      );
-    }
-
-    return const _MedicationStrings(
-      medicationsTitle: 'Farmaci',
-      medicationsSubtitle: 'Terapie attive e storico',
-      inProgress: 'In corso',
-      history: 'Storico',
-      addEntry: 'Aggiungi farmaco',
-      editEntry: 'Modifica farmaco',
-      medicationNameLabel: 'Nome farmaco',
-      medicationNameHint: 'Es. Antibiotico',
-      medicationNameRequired: 'Inserisci il nome del farmaco',
-      statusLabel: 'Stato',
-      statusActive: 'Attivo',
-      statusCompleted: 'Completato',
-      statusPaused: 'Sospeso',
-      startDate: 'Data inizio',
-      endDate: 'Data fine',
-      fromDate: 'dal',
-      toDate: 'al',
-      noEndDate: 'Non impostata',
-      noEndDateShort: 'non impostata',
-      clearEndDate: 'Rimuovi data fine',
-      prescribedByLabel: 'Veterinario / prescrittore',
-      prescribedByHint: 'Opzionale',
-      prescribedByShort: 'Vet',
-      instructionsLabel: 'Indicazioni del veterinario',
-      instructionsHint:
-          'Opzionale. Inserisci solo indicazioni fornite dal veterinario.',
-      instructionsShort: 'Indicazioni',
-      notesLabel: 'Note',
-      notesHint: 'Opzionale',
-      reminderTimesTitle: 'Orari giornalieri promemoria',
-      reminderTimesDescription:
-          'Imposta uno o più orari al giorno per ricevere avvisi.',
-      addTime: 'Aggiungi orario',
-      noReminderTimes: 'Nessun orario',
-      reminderTimesRequired: 'Aggiungi almeno un orario promemoria',
-      reminderMustHaveFutureOccurrence: 'Imposta almeno un promemoria futuro',
-      automaticReminderNote:
-          'Pet Life crea promemoria giornalieri automatici per questi orari. Serve solo a ricordare informazioni inserite da te.',
-      saveEntry: 'Salva farmaco',
-      updateEntry: 'Aggiorna farmaco',
-      cancelEditing: 'Annulla modifica',
-      entrySavedWithReminders: 'Farmaco salvato e promemoria creati',
-      entryUpdatedWithReminders: 'Farmaco aggiornato e promemoria ricreati',
-      entryUpdated: 'Farmaco aggiornato',
-      emptyTitle: 'Nessun farmaco',
-      emptyDescription:
-          'Aggiungi farmaci solo come registro personale delle informazioni fornite dal veterinario.',
-      manageEntries: 'Gestisci farmaci',
-      deleteEntryTitle: 'Eliminare questo farmaco?',
-      deleteEntryMessage:
-          'Il farmaco e i suoi promemoria automatici verranno rimossi.',
-      entryDeleted: 'Farmaco eliminato',
-      delete: 'Elimina',
-      cancel: 'Annulla',
-      petNotFound: 'Pet non trovato',
-      disclaimer:
-          'Pet Life ti aiuta a ricordare le terapie. Dosi, durata e farmaci li decide solo il veterinario. Pet Life non prescrive farmaci, non suggerisce terapie e non calcola dosaggi.',
-      reminderNoteHeader:
-          'Promemoria automatico generato da una terapia farmacologica.',
-      skip: 'Salta',
-      edit: 'Modifica',
-      markTaken: 'Segna presa',
-      day: 'Giorno',
-      ofText: 'di',
-      daysRemaining: 'giorni rimasti',
-      activeTherapy: 'terapia attiva',
-    );
-  }
-}
-
-String _formatHourMinute(int hour, int minute) {
-  return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
 }
 
 DateTime _dateOnly(DateTime value) {

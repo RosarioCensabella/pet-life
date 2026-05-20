@@ -18,7 +18,6 @@ class MedicationReminderTime {
   String get storageKey {
     final normalizedHour = hour.toString().padLeft(2, '0');
     final normalizedMinute = minute.toString().padLeft(2, '0');
-
     return '$normalizedHour:$normalizedMinute';
   }
 
@@ -49,11 +48,16 @@ class MedicationEntry {
     required this.startDate,
     required this.createdAt,
     this.endDate,
+    this.dosage,
     this.prescribedBy,
     this.instructions,
     this.notes,
     this.reminderTimes = const [],
     this.automaticReminderIds = const [],
+    this.takenReminderIds = const [],
+    this.suspendedAt,
+    this.completedAt,
+    this.updatedAt,
   });
 
   final String id;
@@ -64,11 +68,35 @@ class MedicationEntry {
   final DateTime startDate;
   final DateTime createdAt;
   final DateTime? endDate;
+  final String? dosage;
   final String? prescribedBy;
   final String? instructions;
   final String? notes;
   final List<MedicationReminderTime> reminderTimes;
   final List<String> automaticReminderIds;
+  final List<String> takenReminderIds;
+  final DateTime? suspendedAt;
+  final DateTime? completedAt;
+  final DateTime? updatedAt;
+
+  int get totalDoses => automaticReminderIds.length;
+
+  int get takenDoses {
+    final validTakenIds = takenReminderIds
+        .where((id) => automaticReminderIds.contains(id))
+        .toSet();
+
+    return validTakenIds.length;
+  }
+
+  int get remainingDoses {
+    final remaining = totalDoses - takenDoses;
+    return remaining < 0 ? 0 : remaining;
+  }
+
+  bool get isCompletedByProgress {
+    return totalDoses > 0 && takenDoses >= totalDoses;
+  }
 
   MedicationEntry copyWith({
     String? id,
@@ -79,15 +107,24 @@ class MedicationEntry {
     DateTime? startDate,
     DateTime? createdAt,
     DateTime? endDate,
+    String? dosage,
     String? prescribedBy,
     String? instructions,
     String? notes,
     List<MedicationReminderTime>? reminderTimes,
     List<String>? automaticReminderIds,
+    List<String>? takenReminderIds,
+    DateTime? suspendedAt,
+    DateTime? completedAt,
+    DateTime? updatedAt,
     bool clearEndDate = false,
+    bool clearDosage = false,
     bool clearPrescribedBy = false,
     bool clearInstructions = false,
     bool clearNotes = false,
+    bool clearSuspendedAt = false,
+    bool clearCompletedAt = false,
+    bool clearUpdatedAt = false,
   }) {
     return MedicationEntry(
       id: id ?? this.id,
@@ -98,20 +135,64 @@ class MedicationEntry {
       startDate: startDate ?? this.startDate,
       createdAt: createdAt ?? this.createdAt,
       endDate: clearEndDate ? null : endDate ?? this.endDate,
-      prescribedBy:
-          clearPrescribedBy ? null : prescribedBy ?? this.prescribedBy,
-      instructions:
-          clearInstructions ? null : instructions ?? this.instructions,
+      dosage: clearDosage ? null : dosage ?? this.dosage,
+      prescribedBy: clearPrescribedBy ? null : prescribedBy ?? this.prescribedBy,
+      instructions: clearInstructions ? null : instructions ?? this.instructions,
       notes: clearNotes ? null : notes ?? this.notes,
       reminderTimes: reminderTimes ?? this.reminderTimes,
-      automaticReminderIds:
-          automaticReminderIds ?? this.automaticReminderIds,
+      automaticReminderIds: automaticReminderIds ?? this.automaticReminderIds,
+      takenReminderIds: takenReminderIds ?? this.takenReminderIds,
+      suspendedAt: clearSuspendedAt ? null : suspendedAt ?? this.suspendedAt,
+      completedAt: clearCompletedAt ? null : completedAt ?? this.completedAt,
+      updatedAt: clearUpdatedAt ? null : updatedAt ?? this.updatedAt,
+    );
+  }
+
+  MedicationEntry markReminderTaken(String reminderId, DateTime completedAt) {
+    if (!automaticReminderIds.contains(reminderId)) {
+      return this;
+    }
+
+    final nextTakenIds = {
+      ...takenReminderIds,
+      reminderId,
+    }.toList(growable: false);
+
+    final nextTakenCount = nextTakenIds
+        .where((id) => automaticReminderIds.contains(id))
+        .toSet()
+        .length;
+
+    final isNowCompleted =
+        automaticReminderIds.isNotEmpty &&
+        nextTakenCount >= automaticReminderIds.length;
+
+    return copyWith(
+      status: isNowCompleted ? MedicationStatus.completed : status,
+      takenReminderIds: nextTakenIds,
+      completedAt: isNowCompleted ? completedAt : this.completedAt,
+      updatedAt: completedAt,
+      clearSuspendedAt: status == MedicationStatus.paused,
+    );
+  }
+
+  MedicationEntry markReminderNotTaken(String reminderId, DateTime updatedAt) {
+    final nextTakenIds = takenReminderIds
+        .where((id) => id != reminderId)
+        .toList(growable: false);
+
+    return copyWith(
+      status: status == MedicationStatus.completed
+          ? MedicationStatus.active
+          : status,
+      takenReminderIds: nextTakenIds,
+      updatedAt: updatedAt,
+      clearCompletedAt: true,
     );
   }
 
   Map<String, dynamic> toJson() {
-    final firstReminderTime =
-        reminderTimes.isEmpty ? null : reminderTimes.first;
+    final firstReminderTime = reminderTimes.isEmpty ? null : reminderTimes.first;
 
     return {
       'id': id,
@@ -122,6 +203,7 @@ class MedicationEntry {
       'startDate': startDate.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
       'endDate': endDate?.toIso8601String(),
+      'dosage': dosage,
       'prescribedBy': prescribedBy,
       'instructions': instructions,
       'notes': notes,
@@ -129,8 +211,13 @@ class MedicationEntry {
           .map((reminderTime) => reminderTime.toJson())
           .toList(growable: false),
       'automaticReminderIds': automaticReminderIds,
-      'reminderId':
-          automaticReminderIds.isEmpty ? null : automaticReminderIds.first,
+      'takenReminderIds': takenReminderIds,
+      'suspendedAt': suspendedAt?.toIso8601String(),
+      'completedAt': completedAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+
+      // Legacy fields kept for older saved data.
+      'reminderId': automaticReminderIds.isEmpty ? null : automaticReminderIds.first,
       'reminderScheduledAt': firstReminderTime == null
           ? null
           : DateTime(
@@ -148,6 +235,9 @@ class MedicationEntry {
   factory MedicationEntry.fromJson(Map<String, dynamic> json) {
     final startDate = DateTime.parse(json['startDate'] as String);
     final endDateRaw = json['endDate'] as String?;
+    final suspendedAtRaw = json['suspendedAt'] as String?;
+    final completedAtRaw = json['completedAt'] as String?;
+    final updatedAtRaw = json['updatedAt'] as String?;
 
     final reminderTimes = _parseReminderTimes(
       json: json,
@@ -155,6 +245,7 @@ class MedicationEntry {
     );
 
     final automaticReminderIds = _parseAutomaticReminderIds(json);
+    final takenReminderIds = _parseTakenReminderIds(json);
 
     return MedicationEntry(
       id: json['id'] as String,
@@ -167,11 +258,16 @@ class MedicationEntry {
       startDate: startDate,
       createdAt: DateTime.parse(json['createdAt'] as String),
       endDate: endDateRaw == null ? null : DateTime.parse(endDateRaw),
+      dosage: json['dosage'] as String?,
       prescribedBy: json['prescribedBy'] as String?,
       instructions: json['instructions'] as String?,
       notes: json['notes'] as String?,
       reminderTimes: reminderTimes,
       automaticReminderIds: automaticReminderIds,
+      takenReminderIds: takenReminderIds,
+      suspendedAt: suspendedAtRaw == null ? null : DateTime.parse(suspendedAtRaw),
+      completedAt: completedAtRaw == null ? null : DateTime.parse(completedAtRaw),
+      updatedAt: updatedAtRaw == null ? null : DateTime.parse(updatedAtRaw),
     );
   }
 
@@ -181,7 +277,7 @@ class MedicationEntry {
   }) {
     final rawReminderTimes = json['reminderTimes'];
 
-    if (rawReminderTimes is List<dynamic> && rawReminderTimes.isNotEmpty) {
+    if (rawReminderTimes is List && rawReminderTimes.isNotEmpty) {
       final parsed = rawReminderTimes
           .whereType<Map>()
           .map(
@@ -228,7 +324,7 @@ class MedicationEntry {
   static List<String> _parseAutomaticReminderIds(Map<String, dynamic> json) {
     final rawAutomaticReminderIds = json['automaticReminderIds'];
 
-    if (rawAutomaticReminderIds is List<dynamic>) {
+    if (rawAutomaticReminderIds is List) {
       return rawAutomaticReminderIds
           .whereType<String>()
           .toList(growable: false);
@@ -238,6 +334,18 @@ class MedicationEntry {
 
     if (legacyReminderId is String && legacyReminderId.isNotEmpty) {
       return [legacyReminderId];
+    }
+
+    return const [];
+  }
+
+  static List<String> _parseTakenReminderIds(Map<String, dynamic> json) {
+    final rawTakenReminderIds = json['takenReminderIds'];
+
+    if (rawTakenReminderIds is List) {
+      return rawTakenReminderIds
+          .whereType<String>()
+          .toList(growable: false);
     }
 
     return const [];
