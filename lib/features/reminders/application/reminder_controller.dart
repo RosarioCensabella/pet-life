@@ -63,9 +63,12 @@ class ReminderController extends StateNotifier<AsyncValue<List<Reminder>>> {
     final updatedReminders = [...withoutDuplicate, reminder];
 
     await _saveAndEmit(updatedReminders);
-    await _ref.read(reminderNotificationSchedulerProvider).scheduleReminder(
-          reminder: reminder,
-        );
+
+    if (_shouldSchedule(reminder)) {
+      await _ref.read(reminderNotificationSchedulerProvider).scheduleReminder(
+            reminder: reminder,
+          );
+    }
   }
 
   Future<void> deleteReminder(String reminderId) async {
@@ -144,7 +147,7 @@ class ReminderController extends StateNotifier<AsyncValue<List<Reminder>>> {
 
     final reminder = _findReminder(reminderId);
 
-    if (reminder != null) {
+    if (reminder != null && _shouldSchedule(reminder)) {
       await _ref.read(reminderNotificationSchedulerProvider).scheduleReminder(
             reminder: reminder,
           );
@@ -174,7 +177,7 @@ class ReminderController extends StateNotifier<AsyncValue<List<Reminder>>> {
 
     final updatedReminder = _findReminder(reminderId);
 
-    if (updatedReminder != null) {
+    if (updatedReminder != null && _shouldSchedule(updatedReminder)) {
       await _ref.read(reminderNotificationSchedulerProvider).scheduleReminder(
             reminder: updatedReminder,
           );
@@ -265,7 +268,7 @@ class ReminderController extends StateNotifier<AsyncValue<List<Reminder>>> {
         continue;
       }
 
-      if (reminder.status == ReminderStatus.active) {
+      if (_shouldSchedule(reminder)) {
         await _ref.read(reminderNotificationSchedulerProvider).scheduleReminder(
               reminder: reminder,
             );
@@ -322,5 +325,12 @@ class ReminderController extends StateNotifier<AsyncValue<List<Reminder>>> {
     final sorted = [...reminders];
     sorted.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
     return sorted;
+  }
+
+  bool _shouldSchedule(Reminder reminder) {
+    final isActionable = reminder.status == ReminderStatus.active ||
+        reminder.status == ReminderStatus.postponed;
+
+    return isActionable && reminder.scheduledAt.isAfter(DateTime.now());
   }
 }

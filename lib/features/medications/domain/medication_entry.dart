@@ -244,9 +244,6 @@ class MedicationEntry {
       startDate: startDate,
     );
 
-    final automaticReminderIds = _parseAutomaticReminderIds(json);
-    final takenReminderIds = _parseTakenReminderIds(json);
-
     return MedicationEntry(
       id: json['id'] as String,
       petId: json['petId'] as String,
@@ -263,8 +260,8 @@ class MedicationEntry {
       instructions: json['instructions'] as String?,
       notes: json['notes'] as String?,
       reminderTimes: reminderTimes,
-      automaticReminderIds: automaticReminderIds,
-      takenReminderIds: takenReminderIds,
+      automaticReminderIds: _parseAutomaticReminderIds(json),
+      takenReminderIds: _parseTakenReminderIds(json),
       suspendedAt: suspendedAtRaw == null ? null : DateTime.parse(suspendedAtRaw),
       completedAt: completedAtRaw == null ? null : DateTime.parse(completedAtRaw),
       updatedAt: updatedAtRaw == null ? null : DateTime.parse(updatedAtRaw),

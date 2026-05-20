@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../generated/l10n/app_localizations.dart';
 import '../../pets/application/pet_controller.dart';
+import '../../pets/domain/pet.dart';
 import '../application/reminder_controller.dart';
 import '../domain/reminder.dart';
 
@@ -26,10 +27,17 @@ class _AddReminderScreenState extends ConsumerState<AddReminderScreen> {
   final _titleController = TextEditingController();
   final _notesController = TextEditingController();
 
+  String? _selectedPetId;
   ReminderCategory _category = ReminderCategory.vaccine;
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _selectedTime = const TimeOfDay(hour: 9, minute: 0);
   bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedPetId = widget.petId;
+  }
 
   @override
   void dispose() {
@@ -72,10 +80,19 @@ class _AddReminderScreenState extends ConsumerState<AddReminderScreen> {
     });
   }
 
-  Future<void> _saveReminder() async {
+  Future<void> _saveReminder(List<Pet> pets) async {
     final l10n = AppLocalizations.of(context)!;
 
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    final selectedPet = _selectedPetFrom(pets);
+
+    if (selectedPet == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Aggiungi prima un animale')),
+      );
       return;
     }
 
@@ -91,16 +108,10 @@ class _AddReminderScreenState extends ConsumerState<AddReminderScreen> {
       _selectedTime.minute,
     );
 
-    final petName = ref
-            .read(petControllerProvider.notifier)
-            .findById(widget.petId)
-            ?.name ??
-        'Pet';
-
     final reminder = Reminder(
       id: const Uuid().v4(),
-      petId: widget.petId,
-      petName: petName,
+      petId: selectedPet.id,
+      petName: selectedPet.name,
       category: _category,
       title: _titleController.text.trim(),
       scheduledAt: scheduledAt,
@@ -122,8 +133,28 @@ class _AddReminderScreenState extends ConsumerState<AddReminderScreen> {
     if (context.canPop()) {
       context.pop();
     } else {
-      context.go('/pets/${widget.petId}/reminders');
+      context.go('/pets/${selectedPet.id}/reminders');
     }
+  }
+
+  Pet? _selectedPetFrom(List<Pet> pets) {
+    final activePets = pets.where((pet) => !pet.isArchived).toList();
+
+    if (activePets.isEmpty) {
+      return null;
+    }
+
+    final selectedId = _selectedPetId;
+
+    if (selectedId != null) {
+      for (final pet in activePets) {
+        if (pet.id == selectedId) {
+          return pet;
+        }
+      }
+    }
+
+    return activePets.first;
   }
 
   String? _optionalText(String value) {
@@ -139,7 +170,9 @@ class _AddReminderScreenState extends ConsumerState<AddReminderScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final petsState = ref.watch(petControllerProvider);
     final locale = Localizations.localeOf(context).toLanguageTag();
+
     final selectedDateLabel = DateFormat.yMMMd(locale).format(_selectedDate);
     final selectedTimeLabel = _selectedTime.format(context);
 
@@ -148,114 +181,168 @@ class _AddReminderScreenState extends ConsumerState<AddReminderScreen> {
         title: Text(l10n.addReminderTitle),
       ),
       body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              TextFormField(
-                controller: _titleController,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: l10n.reminderTitleLabel,
-                  hintText: l10n.reminderTitleHint,
-                  border: const OutlineInputBorder(),
+        child: petsState.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stackTrace) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  error.toString(),
+                  textAlign: TextAlign.center,
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return l10n.reminderTitleRequired;
-                  }
-
-                  return null;
-                },
               ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<ReminderCategory>(
-                initialValue: _category,
-                decoration: InputDecoration(
-                  labelText: l10n.reminderCategoryLabel,
-                  border: const OutlineInputBorder(),
-                ),
-                items: [
-                  DropdownMenuItem(
-                    value: ReminderCategory.vaccine,
-                    child: Text(l10n.reminderCategoryVaccine),
+            );
+          },
+          data: (pets) {
+            final activePets = pets
+                .where((pet) => !pet.isArchived)
+                .toList(growable: false);
+
+            final selectedPet = _selectedPetFrom(pets);
+
+            return Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(24),
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedPet?.id,
+                    decoration: const InputDecoration(
+                      labelText: 'Animale',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: activePets
+                        .map(
+                          (pet) => DropdownMenuItem(
+                            value: pet.id,
+                            child: Text(pet.name),
+                          ),
+                        )
+                        .toList(growable: false),
+                    onChanged: (value) {
+                      if (value == null) {
+                        return;
+                      }
+
+                      setState(() {
+                        _selectedPetId = value;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Seleziona un animale';
+                      }
+
+                      return null;
+                    },
                   ),
-                  DropdownMenuItem(
-                    value: ReminderCategory.antiparasitic,
-                    child: Text(l10n.reminderCategoryAntiparasitic),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _titleController,
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(
+                      labelText: l10n.reminderTitleLabel,
+                      hintText: l10n.reminderTitleHint,
+                      border: const OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return l10n.reminderTitleRequired;
+                      }
+
+                      return null;
+                    },
                   ),
-                  DropdownMenuItem(
-                    value: ReminderCategory.vetVisit,
-                    child: Text(l10n.reminderCategoryVetVisit),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<ReminderCategory>(
+                    initialValue: _category,
+                    decoration: InputDecoration(
+                      labelText: l10n.reminderCategoryLabel,
+                      border: const OutlineInputBorder(),
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: ReminderCategory.vaccine,
+                        child: Text(l10n.reminderCategoryVaccine),
+                      ),
+                      DropdownMenuItem(
+                        value: ReminderCategory.antiparasitic,
+                        child: Text(l10n.reminderCategoryAntiparasitic),
+                      ),
+                      DropdownMenuItem(
+                        value: ReminderCategory.vetVisit,
+                        child: Text(l10n.reminderCategoryVetVisit),
+                      ),
+                      DropdownMenuItem(
+                        value: ReminderCategory.checkup,
+                        child: Text(l10n.reminderCategoryCheckup),
+                      ),
+                      DropdownMenuItem(
+                        value: ReminderCategory.medication,
+                        child: Text(l10n.reminderCategoryMedication),
+                      ),
+                      DropdownMenuItem(
+                        value: ReminderCategory.insurance,
+                        child: Text(l10n.reminderCategoryInsurance),
+                      ),
+                      DropdownMenuItem(
+                        value: ReminderCategory.grooming,
+                        child: Text(l10n.reminderCategoryGrooming),
+                      ),
+                      DropdownMenuItem(
+                        value: ReminderCategory.custom,
+                        child: Text(l10n.reminderCategoryCustom),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) {
+                        return;
+                      }
+
+                      setState(() {
+                        _category = value;
+                      });
+                    },
                   ),
-                  DropdownMenuItem(
-                    value: ReminderCategory.checkup,
-                    child: Text(l10n.reminderCategoryCheckup),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: _selectDate,
+                    icon: const Icon(Icons.calendar_month_outlined),
+                    label: Text('${l10n.reminderDateLabel}: $selectedDateLabel'),
                   ),
-                  DropdownMenuItem(
-                    value: ReminderCategory.medication,
-                    child: Text(l10n.reminderCategoryMedication),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _selectTime,
+                    icon: const Icon(Icons.schedule_outlined),
+                    label: Text('${l10n.reminderTimeLabel}: $selectedTimeLabel'),
                   ),
-                  DropdownMenuItem(
-                    value: ReminderCategory.insurance,
-                    child: Text(l10n.reminderCategoryInsurance),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _notesController,
+                    minLines: 3,
+                    maxLines: 5,
+                    textInputAction: TextInputAction.done,
+                    decoration: InputDecoration(
+                      labelText: l10n.reminderNotesLabel,
+                      hintText: l10n.reminderNotesHint,
+                      border: const OutlineInputBorder(),
+                    ),
                   ),
-                  DropdownMenuItem(
-                    value: ReminderCategory.grooming,
-                    child: Text(l10n.reminderCategoryGrooming),
-                  ),
-                  DropdownMenuItem(
-                    value: ReminderCategory.custom,
-                    child: Text(l10n.reminderCategoryCustom),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: _isSaving ? null : () => _saveReminder(pets),
+                    child: _isSaving
+                        ? const SizedBox.square(
+                            dimension: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(l10n.saveReminder),
                   ),
                 ],
-                onChanged: (value) {
-                  if (value == null) {
-                    return;
-                  }
-
-                  setState(() {
-                    _category = value;
-                  });
-                },
               ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: _selectDate,
-                icon: const Icon(Icons.calendar_month_outlined),
-                label: Text('${l10n.reminderDateLabel}: $selectedDateLabel'),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: _selectTime,
-                icon: const Icon(Icons.schedule_outlined),
-                label: Text('${l10n.reminderTimeLabel}: $selectedTimeLabel'),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _notesController,
-                minLines: 3,
-                maxLines: 5,
-                textInputAction: TextInputAction.done,
-                decoration: InputDecoration(
-                  labelText: l10n.reminderNotesLabel,
-                  hintText: l10n.reminderNotesHint,
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: _isSaving ? null : _saveReminder,
-                child: _isSaving
-                    ? const SizedBox.square(
-                        dimension: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(l10n.saveReminder),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

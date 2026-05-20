@@ -74,14 +74,18 @@ void main() {
       );
       await tester.enterText(
         find.byType(TextFormField).at(2),
-        'Dott.ssa Bianchi',
+        '0',
       );
       await tester.enterText(
         find.byType(TextFormField).at(3),
-        'Come indicato dal veterinario',
+        'Dott.ssa Bianchi',
       );
       await tester.enterText(
         find.byType(TextFormField).at(4),
+        'Come indicato dal veterinario',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(5),
         'Dopo il pasto',
       );
 
@@ -108,7 +112,8 @@ void main() {
       expect(find.text('Farmaco salvato e promemoria creati'), findsOneWidget);
       expect(find.text('Sospendi'), findsOneWidget);
       expect(find.text('Modifica'), findsOneWidget);
-      expect(find.text('Segna presa'), findsOneWidget);
+      expect(find.text('Annulla'), findsOneWidget);
+      expect(find.text('Presa'), findsOneWidget);
 
       expect(scheduler.scheduledReminders.length, greaterThan(1));
       expect(
@@ -150,7 +155,7 @@ void main() {
       expect(automaticReminderIds.length, reminders.length);
       expect(takenReminderIds, isEmpty);
 
-      await tester.tap(find.text('Segna presa'));
+      await tester.tap(find.text('Presa'));
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pumpAndSettle();
 
@@ -181,6 +186,43 @@ void main() {
 
       expect(completedMedicationReminders, hasLength(1));
 
+      await tester.tap(find.text('Annulla'));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('0 di'), findsOneWidget);
+
+      final rawMedicationsAfterUndo =
+          preferences.getString('pet_life_medication_entries_v1');
+      expect(rawMedicationsAfterUndo, isNotNull);
+
+      final medicationsAfterUndo = jsonDecode(rawMedicationsAfterUndo!) as List;
+      final medicationAfterUndo = medicationsAfterUndo.single as Map;
+      final takenReminderIdsAfterUndo =
+          medicationAfterUndo['takenReminderIds'] as List;
+
+      expect(takenReminderIdsAfterUndo, isEmpty);
+
+      final rawRemindersAfterUndo =
+          preferences.getString('pet_life_reminders_v1');
+      expect(rawRemindersAfterUndo, isNotNull);
+
+      final remindersAfterUndo = jsonDecode(rawRemindersAfterUndo!) as List;
+      final completedMedicationRemindersAfterUndo =
+          remindersAfterUndo.where((item) {
+        final reminder = item as Map;
+        return reminder['category'] == 'medication' &&
+            reminder['status'] == 'completed';
+      }).toList();
+
+      expect(completedMedicationRemindersAfterUndo, isEmpty);
+
+      await tester.tap(find.text('Presa'));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('1 di'), findsOneWidget);
+
       await tester.tap(find.text('Sospendi'));
       await tester.pumpAndSettle();
 
@@ -195,6 +237,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Modifica farmaco'), findsOneWidget);
+      expect(find.text('Cura di Luna. Pet Life crea promemoria giornalieri automatici e aggiorna l’avanzamento quando segni una presa.'), findsOneWidget);
 
       await _scrollModalUntilVisible(
         tester,
@@ -266,11 +309,12 @@ Future<void> _scrollModalUntilVisible(
   WidgetTester tester,
   Finder finder,
 ) async {
-  final scrollable = find.byType(Scrollable).last;
-
-  for (var attempt = 0; attempt < 12 && finder.evaluate().isEmpty; attempt++) {
-    await tester.drag(scrollable, const Offset(0, -320));
-    await tester.pumpAndSettle();
+  for (var attempt = 0; attempt < 18 && finder.evaluate().isEmpty; attempt++) {
+    await tester.dragFrom(
+      const Offset(450, 1120),
+      const Offset(0, -360),
+    );
+    await tester.pump(const Duration(milliseconds: 150));
   }
 
   expect(finder, findsOneWidget);
