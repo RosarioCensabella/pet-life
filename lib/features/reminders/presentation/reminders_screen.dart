@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../generated/l10n/app_localizations.dart';
+import '../../../shared/presentation/pet_life_navigation_bar.dart';
+import '../../pets/application/pet_controller.dart';
+import '../../pets/domain/pet.dart';
 import '../application/reminder_controller.dart';
 import '../domain/reminder.dart';
 
@@ -19,6 +21,8 @@ enum _ReminderAction {
   skip,
 }
 
+const String _allPetsFilterId = '__all_pets__';
+
 class RemindersScreen extends ConsumerStatefulWidget {
   const RemindersScreen({
     this.petId,
@@ -33,150 +37,207 @@ class RemindersScreen extends ConsumerStatefulWidget {
 
 class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   _ReminderFilter _filter = _ReminderFilter.active;
+  late String _selectedPetId;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedPetId = widget.petId ?? _allPetsFilterId;
+  }
+
+  @override
+  void didUpdateWidget(covariant RemindersScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.petId != widget.petId) {
+      _selectedPetId = widget.petId ?? _allPetsFilterId;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final strings = _ReminderDesignStrings.of(context);
     final remindersState = ref.watch(reminderControllerProvider);
+    final petsState = ref.watch(petControllerProvider);
 
     return Scaffold(
       backgroundColor: _ReminderPalette.background,
       body: SafeArea(
-        child: remindersState.when(
+        child: petsState.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stackTrace) => _ErrorState(error: error),
-          data: (reminders) {
-            final visibleSource = widget.petId == null
-                ? reminders
-                : reminders
-                    .where((reminder) => reminder.petId == widget.petId)
-                    .toList(growable: false);
+          data: (pets) {
+            final activePets = pets.where((pet) => !pet.isArchived).toList();
+            final effectiveSelectedPetId = _effectiveSelectedPetId(activePets);
 
-            final sortedReminders = [...visibleSource]
-              ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+            return remindersState.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stackTrace) => _ErrorState(error: error),
+              data: (reminders) {
+                final remindersForPet = _applyPetFilter(
+                  reminders,
+                  effectiveSelectedPetId,
+                );
 
-            final activeCount = sortedReminders
-                .where((reminder) => reminder.status == ReminderStatus.active)
-                .length;
+                final sortedReminders = [...remindersForPet]
+                  ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
 
-            final filteredReminders = _filteredReminders(sortedReminders);
+                final activeCount = sortedReminders
+                    .where(
+                      (reminder) =>
+                          reminder.status == ReminderStatus.active,
+                    )
+                    .length;
 
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
-              children: [
-                _ReminderHeader(
-                  title: l10n.remindersTitle,
-                  subtitle: widget.petId == null
-                      ? '$activeCount ${strings.active} · tutti gli animali'
-                      : '$activeCount ${strings.active}',
-                  addLabel: l10n.addReminder,
-                  onAdd: _openAddReminder,
-                ),
-                const SizedBox(height: 12),
-                _FilterRow(
-                  selectedFilter: _filter,
-                  strings: strings,
-                  onChanged: (filter) {
-                    setState(() {
-                      _filter = filter;
-                    });
-                  },
-                ),
-                const SizedBox(height: 14),
-                if (filteredReminders.isEmpty)
-                  _EmptyReminderList(
-                    title: _emptyTitle(l10n, strings),
-                    description: _emptyDescription(l10n, strings),
-                    buttonLabel: l10n.addReminder,
-                    onAdd: _openAddReminder,
-                  )
-                else
-                  ...filteredReminders.map(
-                    (reminder) => _ReminderTile(
-                      reminder: reminder,
-                      dateLabel: _formatDate(context, reminder.scheduledAt),
-                      postponedLabel: _statusLabel(
-                        l10n,
-                        ReminderStatus.postponed,
-                      ).toLowerCase(),
-                      completedLabel: _statusLabel(
-                        l10n,
-                        ReminderStatus.completed,
-                      ).toLowerCase(),
-                      skippedLabel: _statusLabel(
-                        l10n,
-                        ReminderStatus.skipped,
-                      ).toLowerCase(),
-                      completeLabel: l10n.completeReminder,
-                      postponeLabel: l10n.postponeReminder,
-                      skipLabel: l10n.skipReminder,
-                      onActionSelected: (action) {
-                        switch (action) {
-                          case _ReminderAction.complete:
-                            _completeReminder(reminder);
-                          case _ReminderAction.postpone:
-                            _postponeReminder(reminder);
-                          case _ReminderAction.skip:
-                            _skipReminder(reminder);
-                        }
+                final filteredReminders = _filteredReminders(sortedReminders);
+
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
+                  children: [
+                    _ReminderHeader(
+                      title: 'Promemoria',
+                      subtitle: '$activeCount attivi',
+                      onAdd: () => _openAddReminder(effectiveSelectedPetId),
+                    ),
+                    const SizedBox(height: 12),
+                    _StatusFilterRow(
+                      selectedFilter: _filter,
+                      onChanged: (filter) {
+                        setState(() {
+                          _filter = filter;
+                        });
                       },
                     ),
-                  ),
-              ],
+                    const SizedBox(height: 10),
+                    if (activePets.isNotEmpty)
+                      _PetFilterRow(
+                        pets: activePets,
+                        selectedPetId: effectiveSelectedPetId,
+                        onChanged: (petId) {
+                          setState(() {
+                            _selectedPetId = petId;
+                          });
+                        },
+                      ),
+                    const SizedBox(height: 16),
+                    if (filteredReminders.isEmpty)
+                      _EmptyRemindersState(
+                        title: _emptyTitle,
+                        description: _emptyDescription,
+                        onPressed: () =>
+                            _openAddReminder(effectiveSelectedPetId),
+                      )
+                    else
+                      ...filteredReminders.map(
+                        (reminder) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _ReminderTile(
+                            reminder: reminder,
+                            dateLabel: _formatReminderDate(
+                              context,
+                              reminder.scheduledAt,
+                            ),
+                            statusLabel: _statusLabel(reminder.status),
+                            onCompleteTap: () => _completeReminder(reminder),
+                            onActionSelected: (action) {
+                              switch (action) {
+                                case _ReminderAction.complete:
+                                  _completeReminder(reminder);
+                                case _ReminderAction.postpone:
+                                  _postponeReminder(reminder);
+                                case _ReminderAction.skip:
+                                  _skipReminder(reminder);
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
             );
           },
         ),
       ),
-      bottomNavigationBar: const _ReminderBottomNavigation(),
+      bottomNavigationBar: const PetLifeNavigationBar(
+        selectedDestination: PetLifeDestination.reminders,
+      ),
     );
   }
 
-  List<Reminder> _filteredReminders(List<Reminder> reminders) {
-    return switch (_filter) {
-      _ReminderFilter.active => reminders
-          .where((reminder) => reminder.status == ReminderStatus.active)
-          .toList(growable: false),
-      _ReminderFilter.completed => reminders
-          .where((reminder) => reminder.status != ReminderStatus.active)
-          .toList(growable: false),
-      _ReminderFilter.all => reminders,
-    };
+  String _effectiveSelectedPetId(List<Pet> pets) {
+    if (_selectedPetId == _allPetsFilterId) {
+      return _allPetsFilterId;
+    }
+
+    final exists = pets.any((pet) => pet.id == _selectedPetId);
+
+    if (exists) {
+      return _selectedPetId;
+    }
+
+    return _allPetsFilterId;
   }
 
-  String _emptyTitle(AppLocalizations l10n, _ReminderDesignStrings strings) {
-    return switch (_filter) {
-      _ReminderFilter.active => l10n.noRemindersTitle,
-      _ReminderFilter.completed => strings.noCompletedTitle,
-      _ReminderFilter.all => l10n.noRemindersTitle,
-    };
-  }
-
-  String _emptyDescription(
-    AppLocalizations l10n,
-    _ReminderDesignStrings strings,
+  List<Reminder> _applyPetFilter(
+    List<Reminder> reminders,
+    String selectedPetId,
   ) {
-    return switch (_filter) {
-      _ReminderFilter.active => l10n.noRemindersDescription,
-      _ReminderFilter.completed => strings.noCompletedDescription,
-      _ReminderFilter.all => l10n.noRemindersDescription,
-    };
+    if (selectedPetId == _allPetsFilterId) {
+      return reminders.toList(growable: false);
+    }
+
+    return reminders
+        .where((reminder) => reminder.petId == selectedPetId)
+        .toList(growable: false);
   }
 
-  void _openAddReminder() {
-    final petId = widget.petId;
+  List<Reminder> _filteredReminders(List<Reminder> reminders) {
+    switch (_filter) {
+      case _ReminderFilter.active:
+        return reminders
+            .where((reminder) => reminder.status == ReminderStatus.active)
+            .toList(growable: false);
+      case _ReminderFilter.completed:
+        return reminders
+            .where((reminder) => reminder.status != ReminderStatus.active)
+            .toList(growable: false);
+      case _ReminderFilter.all:
+        return reminders;
+    }
+  }
 
-    if (petId == null) {
+  String get _emptyTitle {
+    switch (_filter) {
+      case _ReminderFilter.active:
+        return 'Nessun promemoria attivo';
+      case _ReminderFilter.completed:
+        return 'Nessun promemoria completato';
+      case _ReminderFilter.all:
+        return 'Nessun promemoria';
+    }
+  }
+
+  String get _emptyDescription {
+    switch (_filter) {
+      case _ReminderFilter.active:
+        return 'Non ci sono promemoria attivi per il filtro selezionato.';
+      case _ReminderFilter.completed:
+        return 'Non ci sono promemoria completati o rimandati per il filtro selezionato.';
+      case _ReminderFilter.all:
+        return 'Non ci sono promemoria per il filtro selezionato.';
+    }
+  }
+
+  void _openAddReminder(String selectedPetId) {
+    if (selectedPetId == _allPetsFilterId) {
       context.push('/reminders/new');
       return;
     }
 
-    context.push('/pets/$petId/reminders/new');
+    context.push('/pets/$selectedPetId/reminders/new');
   }
 
   Future<void> _completeReminder(Reminder reminder) async {
-    final l10n = AppLocalizations.of(context)!;
-
     await ref
         .read(reminderControllerProvider.notifier)
         .completeReminder(reminder.id);
@@ -186,13 +247,13 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.reminderCompleted)),
+      const SnackBar(
+        content: Text('Promemoria completato'),
+      ),
     );
   }
 
   Future<void> _postponeReminder(Reminder reminder) async {
-    final l10n = AppLocalizations.of(context)!;
-
     await ref
         .read(reminderControllerProvider.notifier)
         .postponeReminderByOneDay(reminder.id);
@@ -202,41 +263,57 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.reminderPostponed)),
+      const SnackBar(
+        content: Text('Promemoria rimandato di un giorno'),
+      ),
     );
   }
 
   Future<void> _skipReminder(Reminder reminder) async {
-    final l10n = AppLocalizations.of(context)!;
-
-    await ref.read(reminderControllerProvider.notifier).skipReminder(
-          reminder.id,
-        );
+    await ref
+        .read(reminderControllerProvider.notifier)
+        .skipReminder(reminder.id);
 
     if (!mounted) {
       return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.reminderSkipped)),
+      const SnackBar(
+        content: Text('Promemoria saltato'),
+      ),
     );
   }
 
-  String _formatDate(BuildContext context, DateTime date) {
+  String _formatReminderDate(BuildContext context, DateTime date) {
     final locale = Localizations.localeOf(context).toLanguageTag();
-    final dayLabel = DateFormat('EEE d MMM', locale).format(date);
+    final dayLabel = DateFormat('EEE dd MMM', locale)
+        .format(date)
+        .replaceAll('.', '');
     final timeLabel = DateFormat.Hm(locale).format(date);
 
     return '${_capitalize(dayLabel)} · $timeLabel';
   }
 
-  String _statusLabel(AppLocalizations l10n, ReminderStatus status) {
-    return switch (status) {
-      ReminderStatus.active => l10n.reminderStatusActive,
-      ReminderStatus.completed => l10n.reminderStatusCompleted,
-      ReminderStatus.postponed => l10n.reminderStatusPostponed,
-      ReminderStatus.skipped => l10n.reminderStatusSkipped,
-    };
+  String _statusLabel(ReminderStatus status) {
+    switch (status) {
+      case ReminderStatus.active:
+        return 'attivo';
+      case ReminderStatus.completed:
+        return 'completato';
+      case ReminderStatus.postponed:
+        return 'rimandato';
+      case ReminderStatus.skipped:
+        return 'saltato';
+    }
+  }
+
+  String _capitalize(String value) {
+    if (value.isEmpty) {
+      return value;
+    }
+
+    return value[0].toUpperCase() + value.substring(1);
   }
 }
 
@@ -244,42 +321,44 @@ class _ReminderHeader extends StatelessWidget {
   const _ReminderHeader({
     required this.title,
     required this.subtitle,
-    required this.addLabel,
     required this.onAdd,
   });
 
   final String title;
   final String subtitle;
-  final String addLabel;
   final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontSize: 25,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.8,
-                      color: _ReminderPalette.darkText,
-                    ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: _ReminderPalette.secondaryText,
-                    ),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.8,
+                        color: _ReminderPalette.darkText,
+                      ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _ReminderPalette.secondaryText,
+                      ),
+                ),
+              ],
+            ),
           ),
         ),
         Material(
@@ -288,22 +367,13 @@ class _ReminderHeader extends StatelessWidget {
           child: InkWell(
             customBorder: const CircleBorder(),
             onTap: onAdd,
-            child: SizedBox(
+            child: const SizedBox(
               width: 42,
               height: 42,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Icon(
-                    Icons.add_rounded,
-                    size: 23,
-                    color: _ReminderPalette.darkText,
-                  ),
-                  Opacity(
-                    opacity: 0,
-                    child: Text(addLabel),
-                  ),
-                ],
+              child: Icon(
+                Icons.add,
+                size: 22,
+                color: _ReminderPalette.darkText,
               ),
             ),
           ),
@@ -313,40 +383,80 @@ class _ReminderHeader extends StatelessWidget {
   }
 }
 
-class _FilterRow extends StatelessWidget {
-  const _FilterRow({
+class _StatusFilterRow extends StatelessWidget {
+  const _StatusFilterRow({
     required this.selectedFilter,
-    required this.strings,
     required this.onChanged,
   });
 
   final _ReminderFilter selectedFilter;
-  final _ReminderDesignStrings strings;
   final ValueChanged<_ReminderFilter> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
         _FilterChipButton(
-          label: strings.activePlural,
+          label: 'Attivi',
           selected: selectedFilter == _ReminderFilter.active,
           onTap: () => onChanged(_ReminderFilter.active),
         ),
-        const SizedBox(width: 7),
         _FilterChipButton(
-          label: strings.completedPlural,
+          label: 'Completati',
           selected: selectedFilter == _ReminderFilter.completed,
           onTap: () => onChanged(_ReminderFilter.completed),
         ),
-        const SizedBox(width: 7),
         _FilterChipButton(
-          label: strings.all,
+          label: 'Tutti',
           selected: selectedFilter == _ReminderFilter.all,
           onTap: () => onChanged(_ReminderFilter.all),
         ),
       ],
     );
+  }
+}
+
+class _PetFilterRow extends StatelessWidget {
+  const _PetFilterRow({
+    required this.pets,
+    required this.selectedPetId,
+    required this.onChanged,
+  });
+
+  final List<Pet> pets;
+  final String selectedPetId;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _FilterChipButton(
+          label: 'Tutti',
+          selected: selectedPetId == _allPetsFilterId,
+          onTap: () => onChanged(_allPetsFilterId),
+        ),
+        for (final pet in pets)
+          _PetFilterChipButton(
+            label: pet.name,
+            color: _visiblePetColor(Color(pet.colorValue)),
+            selected: selectedPetId == pet.id,
+            onTap: () => onChanged(pet.id),
+          ),
+      ],
+    );
+  }
+
+  Color _visiblePetColor(Color color) {
+    if (color.computeLuminance() > 0.82) {
+      return _ReminderPalette.orange;
+    }
+
+    return color;
   }
 }
 
@@ -364,24 +474,81 @@ class _FilterChipButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final background =
-        selected ? _ReminderPalette.darkText : _ReminderPalette.chip;
-    final foreground = selected ? Colors.white : _ReminderPalette.secondaryText;
+        selected ? _ReminderPalette.selectedChip : _ReminderPalette.chip;
+    final foreground =
+        selected ? Colors.white : _ReminderPalette.secondaryText;
 
     return Material(
       color: background,
-      borderRadius: BorderRadius.circular(999),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           child: Text(
             label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontSize: 12,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
                   color: foreground,
-                  fontWeight: FontWeight.w900,
                 ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PetFilterChipButton extends StatelessWidget {
+  const _PetFilterChipButton({
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final background =
+        selected ? _ReminderPalette.selectedChip : _ReminderPalette.chip;
+    final foreground =
+        selected ? Colors.white : _ReminderPalette.secondaryText;
+
+    return Material(
+      color: background,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 7),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: foreground,
+                    ),
+              ),
+            ],
           ),
         ),
       ),
@@ -393,196 +560,233 @@ class _ReminderTile extends StatelessWidget {
   const _ReminderTile({
     required this.reminder,
     required this.dateLabel,
-    required this.postponedLabel,
-    required this.completedLabel,
-    required this.skippedLabel,
-    required this.completeLabel,
-    required this.postponeLabel,
-    required this.skipLabel,
+    required this.statusLabel,
+    required this.onCompleteTap,
     required this.onActionSelected,
   });
 
   final Reminder reminder;
   final String dateLabel;
-  final String postponedLabel;
-  final String completedLabel;
-  final String skippedLabel;
-  final String completeLabel;
-  final String postponeLabel;
-  final String skipLabel;
+  final String statusLabel;
+  final VoidCallback onCompleteTap;
   final ValueChanged<_ReminderAction> onActionSelected;
 
-  bool get _isCompleted {
-    return reminder.status == ReminderStatus.completed ||
-        reminder.status == ReminderStatus.skipped;
-  }
-
-  bool get _canComplete {
-    return reminder.status == ReminderStatus.active ||
-        reminder.status == ReminderStatus.postponed;
-  }
+  bool get _isCompleted => reminder.status == ReminderStatus.completed;
+  bool get _isPostponed => reminder.status == ReminderStatus.postponed;
+  bool get _isSkipped => reminder.status == ReminderStatus.skipped;
 
   @override
   Widget build(BuildContext context) {
-    final accent = _accentColorForCategory(reminder.category);
-    final rowOpacity = _isCompleted ? 0.56 : 1.0;
+    final iconData = _iconForCategory(reminder.category);
+    final accent = _colorForCategory(reminder.category);
+    final metaStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: _ReminderPalette.secondaryText,
+        );
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+    final titleStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
+          fontSize: 15,
+          fontWeight: FontWeight.w800,
+          color: _isCompleted || _isSkipped
+              ? _ReminderPalette.secondaryText
+              : _ReminderPalette.darkText,
+          decoration:
+              _isCompleted || _isSkipped ? TextDecoration.lineThrough : null,
+          decorationColor: _ReminderPalette.secondaryText,
+          decorationThickness: 2,
+        );
+
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: _ReminderPalette.card,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _ReminderPalette.outline),
+        border: Border.all(
+          color: _ReminderPalette.outline,
+        ),
         boxShadow: [
           BoxShadow(
-            color: _ReminderPalette.darkText.withValues(alpha: 0.045),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 14,
-            offset: const Offset(0, 6),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(18),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: () {},
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 58),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
-              child: Row(
-                children: [
-                  _StatusCircle(
-                    status: reminder.status,
-                    accent: accent,
-                    canComplete: _canComplete,
-                    onTap: _canComplete
-                        ? () => onActionSelected(_ReminderAction.complete)
-                        : null,
-                  ),
-                  const SizedBox(width: 11),
-                  Opacity(
-                    opacity: rowOpacity,
-                    child: _CategoryIcon(
-                      category: reminder.category,
-                      accent: accent,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+          child: Row(
+            children: [
+              _LeadingStatusButton(
+                status: reminder.status,
+                color: accent,
+                onTap: reminder.status == ReminderStatus.active
+                    ? onCompleteTap
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  iconData,
+                  size: 18,
+                  color: accent,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      reminder.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: titleStyle,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Opacity(
-                      opacity: rowOpacity,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            reminder.title,
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            reminder.petName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
-                                ?.copyWith(
-                                  fontSize: 14,
-                                  height: 1.12,
-                                  fontWeight: FontWeight.w900,
-                                  color: _ReminderPalette.darkText,
-                                  decoration: _isCompleted
-                                      ? TextDecoration.lineThrough
-                                      : TextDecoration.none,
-                                  decorationThickness: 1.8,
-                                  decorationColor:
-                                      _ReminderPalette.secondaryText,
-                                ),
+                            style: metaStyle,
                           ),
-                          const SizedBox(height: 4),
-                          _ReminderMetaLine(
-                            petName: reminder.petName,
-                            dateLabel: dateLabel,
-                            status: reminder.status,
-                            postponedLabel: postponedLabel,
-                            completedLabel: completedLabel,
-                            skippedLabel: skippedLabel,
+                        ),
+                        Text(
+                          '  ·  ',
+                          style: metaStyle,
+                        ),
+                        Expanded(
+                          child: Text(
+                            dateLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: metaStyle,
+                          ),
+                        ),
+                        if (_isPostponed) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            statusLabel,
+                            style: metaStyle?.copyWith(
+                              color: _ReminderPalette.purple,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ],
-                      ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  _MoreButton(
-                    completeLabel: completeLabel,
-                    postponeLabel: postponeLabel,
-                    skipLabel: skipLabel,
-                    canComplete: _canComplete,
-                    onSelected: onActionSelected,
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              _ReminderMenuButton(
+                onSelected: onActionSelected,
+                canComplete: reminder.status == ReminderStatus.active,
+                canPostpone: reminder.status == ReminderStatus.active,
+                canSkip: reminder.status == ReminderStatus.active,
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Color _accentColorForCategory(ReminderCategory category) {
-    return switch (category) {
-      ReminderCategory.vaccine => const Color(0xFFF3A83B),
-      ReminderCategory.antiparasitic => const Color(0xFFF3A83B),
-      ReminderCategory.vetVisit => const Color(0xFF80B894),
-      ReminderCategory.checkup => const Color(0xFF80B894),
-      ReminderCategory.medication => const Color(0xFFA876E8),
-      ReminderCategory.insurance => const Color(0xFF7E8EA3),
-      ReminderCategory.grooming => const Color(0xFFF3A83B),
-      ReminderCategory.custom => const Color(0xFFA876E8),
-    };
+  IconData _iconForCategory(ReminderCategory category) {
+    switch (category) {
+      case ReminderCategory.vaccine:
+        return Icons.shield_outlined;
+      case ReminderCategory.antiparasitic:
+        return Icons.water_drop_outlined;
+      case ReminderCategory.vetVisit:
+        return Icons.medical_services_outlined;
+      case ReminderCategory.checkup:
+        return Icons.health_and_safety_outlined;
+      case ReminderCategory.medication:
+        return Icons.medication_liquid_outlined;
+      case ReminderCategory.insurance:
+        return Icons.verified_user_outlined;
+      case ReminderCategory.grooming:
+        return Icons.content_cut_rounded;
+      case ReminderCategory.custom:
+        return Icons.notifications_none_rounded;
+    }
+  }
+
+  Color _colorForCategory(ReminderCategory category) {
+    switch (category) {
+      case ReminderCategory.vaccine:
+        return _ReminderPalette.orange;
+      case ReminderCategory.antiparasitic:
+        return _ReminderPalette.orange;
+      case ReminderCategory.vetVisit:
+        return _ReminderPalette.purple;
+      case ReminderCategory.checkup:
+        return _ReminderPalette.green;
+      case ReminderCategory.medication:
+        return _ReminderPalette.purple;
+      case ReminderCategory.insurance:
+        return _ReminderPalette.green;
+      case ReminderCategory.grooming:
+        return _ReminderPalette.orange;
+      case ReminderCategory.custom:
+        return _ReminderPalette.purple;
+    }
   }
 }
 
-class _StatusCircle extends StatelessWidget {
-  const _StatusCircle({
+class _LeadingStatusButton extends StatelessWidget {
+  const _LeadingStatusButton({
     required this.status,
-    required this.accent,
-    required this.canComplete,
-    required this.onTap,
+    required this.color,
+    this.onTap,
   });
 
   final ReminderStatus status;
-  final Color accent;
-  final bool canComplete;
+  final Color color;
   final VoidCallback? onTap;
-
-  bool get _isDone {
-    return status == ReminderStatus.completed ||
-        status == ReminderStatus.skipped;
-  }
 
   @override
   Widget build(BuildContext context) {
-    final fillColor = _isDone ? accent.withValues(alpha: 0.62) : Colors.white;
-    final borderColor =
-        _isDone ? Colors.transparent : _ReminderPalette.outlineStrong;
+    final isCompleted = status == ReminderStatus.completed;
+    final isSkipped = status == ReminderStatus.skipped;
+    final isDone = isCompleted || isSkipped;
 
     return Material(
       color: Colors.transparent,
       shape: const CircleBorder(),
       child: InkWell(
-        customBorder: const CircleBorder(),
         onTap: onTap,
+        customBorder: const CircleBorder(),
         child: Container(
-          width: 22,
-          height: 22,
+          width: 26,
+          height: 26,
           decoration: BoxDecoration(
-            color: fillColor,
+            color: isDone ? color.withValues(alpha: 0.55) : Colors.transparent,
             shape: BoxShape.circle,
-            border: Border.all(color: borderColor),
+            border: Border.all(
+              color: isDone
+                  ? color.withValues(alpha: 0.55)
+                  : _ReminderPalette.outline,
+              width: 1.2,
+            ),
           ),
-          child: _isDone
+          child: isDone
               ? const Icon(
-                  Icons.check_rounded,
+                  Icons.check,
+                  size: 16,
                   color: Colors.white,
-                  size: 15,
                 )
               : null,
         ),
@@ -591,221 +795,115 @@ class _StatusCircle extends StatelessWidget {
   }
 }
 
-class _CategoryIcon extends StatelessWidget {
-  const _CategoryIcon({
-    required this.category,
-    required this.accent,
-  });
-
-  final ReminderCategory category;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 34,
-      height: 34,
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.11),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Icon(
-        _iconForCategory(category),
-        color: accent,
-        size: 17,
-      ),
-    );
-  }
-
-  IconData _iconForCategory(ReminderCategory category) {
-    return switch (category) {
-      ReminderCategory.vaccine => Icons.health_and_safety_outlined,
-      ReminderCategory.antiparasitic => Icons.water_drop_outlined,
-      ReminderCategory.vetVisit => Icons.medical_services_outlined,
-      ReminderCategory.checkup => Icons.health_and_safety_outlined,
-      ReminderCategory.medication => Icons.medication_outlined,
-      ReminderCategory.insurance => Icons.verified_user_outlined,
-      ReminderCategory.grooming => Icons.content_cut_outlined,
-      ReminderCategory.custom => Icons.notifications_active_outlined,
-    };
-  }
-}
-
-class _ReminderMetaLine extends StatelessWidget {
-  const _ReminderMetaLine({
-    required this.petName,
-    required this.dateLabel,
-    required this.status,
-    required this.postponedLabel,
-    required this.completedLabel,
-    required this.skippedLabel,
-  });
-
-  final String petName;
-  final String dateLabel;
-  final ReminderStatus status;
-  final String postponedLabel;
-  final String completedLabel;
-  final String skippedLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final statusText = switch (status) {
-      ReminderStatus.postponed => postponedLabel,
-      ReminderStatus.completed => completedLabel,
-      ReminderStatus.skipped => skippedLabel,
-      ReminderStatus.active => null,
-    };
-
-    return Wrap(
-      spacing: 5,
-      runSpacing: 2,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        Text(
-          petName,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 11,
-                height: 1.15,
-                color: _ReminderPalette.secondaryText,
-                fontWeight: FontWeight.w700,
-              ),
-        ),
-        Text(
-          '·',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 11,
-                height: 1.15,
-                color: _ReminderPalette.secondaryText,
-              ),
-        ),
-        Text(
-          dateLabel,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 11,
-                height: 1.15,
-                color: _ReminderPalette.secondaryText,
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-        if (statusText != null) ...[
-          Text(
-            '·',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 11,
-                  height: 1.15,
-                  color: _ReminderPalette.secondaryText,
-                ),
-          ),
-          Text(
-            statusText,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 11,
-                  height: 1.15,
-                  color: status == ReminderStatus.postponed
-                      ? _ReminderPalette.postponed
-                      : _ReminderPalette.secondaryText,
-                  fontWeight: FontWeight.w900,
-                ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _MoreButton extends StatelessWidget {
-  const _MoreButton({
-    required this.completeLabel,
-    required this.postponeLabel,
-    required this.skipLabel,
-    required this.canComplete,
+class _ReminderMenuButton extends StatelessWidget {
+  const _ReminderMenuButton({
     required this.onSelected,
+    required this.canComplete,
+    required this.canPostpone,
+    required this.canSkip,
   });
 
-  final String completeLabel;
-  final String postponeLabel;
-  final String skipLabel;
-  final bool canComplete;
   final ValueChanged<_ReminderAction> onSelected;
+  final bool canComplete;
+  final bool canPostpone;
+  final bool canSkip;
 
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<_ReminderAction>(
-      tooltip: 'Azioni',
       onSelected: onSelected,
-      position: PopupMenuPosition.under,
+      enabled: canComplete || canPostpone || canSkip,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
       itemBuilder: (context) {
-        return [
-          if (canComplete)
-            PopupMenuItem(
+        final items = <PopupMenuEntry<_ReminderAction>>[];
+
+        if (canComplete) {
+          items.add(
+            const PopupMenuItem(
               value: _ReminderAction.complete,
-              child: Text(completeLabel),
+              child: Text('Segna come fatto'),
             ),
-          if (canComplete)
-            PopupMenuItem(
+          );
+        }
+
+        if (canPostpone) {
+          items.add(
+            const PopupMenuItem(
               value: _ReminderAction.postpone,
-              child: Text(postponeLabel),
+              child: Text('Rimanda di 1 giorno'),
             ),
-          PopupMenuItem(
-            value: _ReminderAction.skip,
-            child: Text(skipLabel),
-          ),
-        ];
+          );
+        }
+
+        if (canSkip) {
+          items.add(
+            const PopupMenuItem(
+              value: _ReminderAction.skip,
+              child: Text('Salta'),
+            ),
+          );
+        }
+
+        return items;
       },
       child: Container(
-        width: 34,
-        height: 34,
-        alignment: Alignment.center,
+        width: 38,
+        height: 38,
         decoration: const BoxDecoration(
           color: _ReminderPalette.chip,
           shape: BoxShape.circle,
         ),
-        child: const Icon(
-          Icons.more_horiz_rounded,
-          size: 18,
-          color: _ReminderPalette.darkText,
+        alignment: Alignment.center,
+        child: const Text(
+          '⋯',
+          style: TextStyle(
+            fontSize: 18,
+            height: 1,
+            fontWeight: FontWeight.w700,
+            color: _ReminderPalette.darkText,
+          ),
         ),
       ),
     );
   }
 }
 
-class _EmptyReminderList extends StatelessWidget {
-  const _EmptyReminderList({
+class _EmptyRemindersState extends StatelessWidget {
+  const _EmptyRemindersState({
     required this.title,
     required this.description,
-    required this.buttonLabel,
-    required this.onAdd,
+    required this.onPressed,
   });
 
   final String title;
   final String description;
-  final String buttonLabel;
-  final VoidCallback onAdd;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: _ReminderPalette.card,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: _ReminderPalette.outline),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(22),
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
         child: Column(
           children: [
             const Icon(
               Icons.notifications_none_rounded,
+              size: 42,
               color: _ReminderPalette.secondaryText,
-              size: 34,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w900,
                     color: _ReminderPalette.darkText,
                   ),
@@ -814,64 +912,27 @@ class _EmptyReminderList extends StatelessWidget {
             Text(
               description,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: _ReminderPalette.secondaryText,
+                    height: 1.35,
                   ),
             ),
             const SizedBox(height: 18),
             FilledButton.icon(
-              onPressed: onAdd,
-              icon: const Icon(Icons.add_rounded),
-              label: Text(buttonLabel),
+              onPressed: onPressed,
+              style: FilledButton.styleFrom(
+                backgroundColor: _ReminderPalette.selectedChip,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              icon: const Icon(Icons.add),
+              label: const Text('Aggiungi promemoria'),
             ),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _ReminderBottomNavigation extends StatelessWidget {
-  const _ReminderBottomNavigation();
-
-  @override
-  Widget build(BuildContext context) {
-    return NavigationBar(
-      selectedIndex: 2,
-      onDestinationSelected: (index) {
-        switch (index) {
-          case 0:
-            context.go('/home');
-          case 1:
-            context.go('/calendar');
-          case 2:
-            context.go('/reminders');
-          case 3:
-            context.go('/settings');
-        }
-      },
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home_rounded),
-          label: 'Home',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.calendar_month_outlined),
-          selectedIcon: Icon(Icons.calendar_month_rounded),
-          label: 'Calendario',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.notifications_none_rounded),
-          selectedIcon: Icon(Icons.notifications_rounded),
-          label: 'Promem.',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.more_horiz_rounded),
-          selectedIcon: Icon(Icons.more_horiz_rounded),
-          label: 'Altro',
-        ),
-      ],
     );
   }
 }
@@ -891,7 +952,6 @@ class _ErrorState extends StatelessWidget {
         child: Text(
           error.toString(),
           textAlign: TextAlign.center,
-          style: const TextStyle(color: _ReminderPalette.darkText),
         ),
       ),
     );
@@ -901,65 +961,15 @@ class _ErrorState extends StatelessWidget {
 class _ReminderPalette {
   const _ReminderPalette._();
 
-  static const background = Color(0xFFF8F1E2);
+  static const background = Color(0xFFF8F4E8);
   static const card = Color(0xFFFFFFFF);
-  static const chip = Color(0xFFF3E8D1);
-  static const outline = Color(0xFFE3D2B4);
-  static const outlineStrong = Color(0xFFE0C89D);
+  static const chip = Color(0xFFF2EAD8);
+  static const selectedChip = Color(0xFF2C2418);
+  static const outline = Color(0xFFE6D9BE);
+  static const darkText = Color(0xFF33291F);
+  static const secondaryText = Color(0xFF8C7A66);
 
-  static const darkText = Color(0xFF2D2418);
-  static const secondaryText = Color(0xFF8B7A63);
-  static const postponed = Color(0xFFA876E8);
-}
-
-class _ReminderDesignStrings {
-  const _ReminderDesignStrings({
-    required this.active,
-    required this.activePlural,
-    required this.completedPlural,
-    required this.all,
-    required this.noCompletedTitle,
-    required this.noCompletedDescription,
-  });
-
-  final String active;
-  final String activePlural;
-  final String completedPlural;
-  final String all;
-  final String noCompletedTitle;
-  final String noCompletedDescription;
-
-  static _ReminderDesignStrings of(BuildContext context) {
-    final languageCode = Localizations.localeOf(context).languageCode;
-
-    if (languageCode == 'en') {
-      return const _ReminderDesignStrings(
-        active: 'active',
-        activePlural: 'Active',
-        completedPlural: 'Completed',
-        all: 'All',
-        noCompletedTitle: 'No completed reminders',
-        noCompletedDescription:
-            'Completed, postponed or skipped reminders will appear here.',
-      );
-    }
-
-    return const _ReminderDesignStrings(
-      active: 'attivi',
-      activePlural: 'Attivi',
-      completedPlural: 'Completati',
-      all: 'Tutti',
-      noCompletedTitle: 'Nessun promemoria completato',
-      noCompletedDescription:
-          'Qui vedrai i promemoria completati, rimandati o saltati.',
-    );
-  }
-}
-
-String _capitalize(String value) {
-  if (value.isEmpty) {
-    return value;
-  }
-
-  return value[0].toUpperCase() + value.substring(1);
+  static const orange = Color(0xFFE9B14A);
+  static const purple = Color(0xFFB38BE8);
+  static const green = Color(0xFFA8CDAF);
 }

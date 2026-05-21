@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/theme.dart';
-import '../../features/pets/application/pet_controller.dart';
-import '../../features/pets/domain/pet.dart';
 import '../../generated/l10n/app_localizations.dart';
 
 enum PetLifeDestination {
@@ -14,7 +11,7 @@ enum PetLifeDestination {
   settings,
 }
 
-class PetLifeNavigationBar extends ConsumerWidget {
+class PetLifeNavigationBar extends StatelessWidget {
   const PetLifeNavigationBar({
     required this.selectedDestination,
     super.key,
@@ -23,15 +20,9 @@ class PetLifeNavigationBar extends ConsumerWidget {
   final PetLifeDestination selectedDestination;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final strings = _NavigationStrings.of(context);
-    final petsState = ref.watch(petControllerProvider);
-
-    final firstActivePet = petsState.maybeWhen(
-      data: (pets) => _firstActivePet(pets),
-      orElse: () => null,
-    );
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -74,14 +65,7 @@ class PetLifeNavigationBar extends ConsumerWidget {
                 selectedIcon: Icons.notifications_rounded,
                 label: strings.reminders,
                 selected: selectedDestination == PetLifeDestination.reminders,
-                onTap: () {
-                  if (firstActivePet == null) {
-                    context.go('/home');
-                    return;
-                  }
-
-                  context.go('/pets/${firstActivePet.id}/reminders');
-                },
+                onTap: () => context.go('/reminders'),
               ),
               _NavItem(
                 icon: Icons.more_horiz_outlined,
@@ -96,16 +80,6 @@ class PetLifeNavigationBar extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  Pet? _firstActivePet(List<Pet> pets) {
-    for (final pet in pets) {
-      if (!pet.isArchived) {
-        return pet;
-      }
-    }
-
-    return null;
   }
 }
 

@@ -38,8 +38,6 @@ GoRouter buildAppRouter() {
         path: '/calendar',
         builder: (context, state) => const CalendarScreen(),
       ),
-
-      // Promemoria globale: mostra i reminder di tutti gli animali.
       GoRoute(
         path: '/reminders',
         builder: (context, state) => const RemindersScreen(),
@@ -48,7 +46,6 @@ GoRouter buildAppRouter() {
         path: '/reminders/new',
         builder: (context, state) => const AddReminderScreen(),
       ),
-
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
