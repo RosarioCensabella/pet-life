@@ -463,7 +463,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     for (final medication in medicationEntries) {
       final pet = petById[medication.petId];
-      if (pet == null || medication.status == MedicationStatus.completed) {
+
+      if (pet == null ||
+          medication.status == MedicationStatus.completed ||
+          medication.status == MedicationStatus.paused) {
         continue;
       }
 
