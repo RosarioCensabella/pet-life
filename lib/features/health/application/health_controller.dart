@@ -7,7 +7,6 @@ import '../domain/health_entry.dart';
 final healthLocalStorageProvider = FutureProvider<HealthLocalStorage>(
   (ref) async {
     final preferences = await ref.watch(sharedPreferencesProvider.future);
-
     return HealthLocalStorage(preferences: preferences);
   },
 );
@@ -17,7 +16,6 @@ final healthControllerProvider =
   (ref) {
     final controller = HealthController(ref: ref);
     controller.loadEntries();
-
     return controller;
   },
 );
@@ -42,7 +40,7 @@ class HealthController extends StateNotifier<AsyncValue<List<HealthEntry>>> {
   }
 
   List<HealthEntry> entriesForPet(String petId) {
-    final entries = state.valueOrNull ?? const [];
+    final entries = state.valueOrNull ?? const <HealthEntry>[];
 
     return entries
         .where((entry) => entry.petId == petId)
@@ -50,14 +48,35 @@ class HealthController extends StateNotifier<AsyncValue<List<HealthEntry>>> {
   }
 
   Future<void> addEntry(HealthEntry entry) async {
-    final currentEntries = state.valueOrNull ?? const [];
+    await _ensureLoaded();
+
+    final currentEntries = state.valueOrNull ?? const <HealthEntry>[];
     final updatedEntries = [...currentEntries, entry];
 
     await _saveAndEmit(updatedEntries);
   }
 
+  Future<void> updateEntry(HealthEntry updatedEntry) async {
+    await _ensureLoaded();
+
+    final currentEntries = state.valueOrNull ?? const <HealthEntry>[];
+
+    final updatedEntries = currentEntries.map((entry) {
+      if (entry.id == updatedEntry.id) {
+        return updatedEntry;
+      }
+
+      return entry;
+    }).toList(growable: false);
+
+    await _saveAndEmit(updatedEntries);
+  }
+
   Future<void> deleteEntry(String entryId) async {
-    final currentEntries = state.valueOrNull ?? const [];
+    await _ensureLoaded();
+
+    final currentEntries = state.valueOrNull ?? const <HealthEntry>[];
+
     final updatedEntries = currentEntries
         .where((entry) => entry.id != entryId)
         .toList(growable: false);
@@ -65,9 +84,14 @@ class HealthController extends StateNotifier<AsyncValue<List<HealthEntry>>> {
     await _saveAndEmit(updatedEntries);
   }
 
+  Future<void> _ensureLoaded() async {
+    if (state.isLoading || state.valueOrNull == null) {
+      await loadEntries();
+    }
+  }
+
   Future<void> _saveAndEmit(List<HealthEntry> entries) async {
     final sortedEntries = _sortEntries(entries);
-
     state = AsyncValue.data(sortedEntries);
 
     try {

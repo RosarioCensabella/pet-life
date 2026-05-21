@@ -22,84 +22,124 @@ void main() {
     _seedPet();
   });
 
-  testWidgets('User can add and delete a health diary entry', (
-    tester,
-  ) async {
-    await _pumpApp(tester);
+  testWidgets(
+    'User can add and delete a health diary entry',
+    (tester) async {
+      await _pumpApp(tester);
 
-    await tester.tap(find.text('Accetta e continua'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Accetta e continua'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Luna'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Luna'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Diario salute'), findsOneWidget);
+      expect(find.text('Diario salute'), findsOneWidget);
 
-    await tester.tap(find.text('Diario salute'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Diario salute'));
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('non fa diagnosi'), findsOneWidget);
-    expect(find.text('Nessuna voce'), findsOneWidget);
+      expect(find.text('Note salvate'), findsOneWidget);
+      expect(find.text('Nessuna nota salvata'), findsOneWidget);
+      expect(
+        find.textContaining('Pet Life non li interpreta clinicamente'),
+        findsOneWidget,
+      );
 
-    await tester.enterText(find.byType(TextFormField).at(0), 'Nota controllo');
-    await tester.enterText(
-      find.byType(TextFormField).at(1),
-      'Appetito regolare',
-    );
+      await tester.tap(find.byIcon(Icons.add).first);
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Salva voce'));
-    await tester.pumpAndSettle();
+      expect(find.text('Aggiungi una nota'), findsOneWidget);
 
-    expect(find.text('Nota controllo'), findsOneWidget);
-    expect(find.text('Appetito regolare'), findsOneWidget);
+      await tester.enterText(
+        find.byType(TextFormField).at(0),
+        'Nota controllo',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(1),
+        'Appetito regolare',
+      );
 
-    await tester.tap(find.byIcon(Icons.delete_outline).first);
-    await tester.pumpAndSettle();
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
 
-    expect(find.text('Eliminare questa voce?'), findsOneWidget);
+      await tester.tap(find.text('Salva'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Elimina'));
-    await tester.pumpAndSettle();
+      expect(find.text('Nota controllo'), findsOneWidget);
+      expect(find.text('Appetito regolare'), findsOneWidget);
 
-    expect(find.text('Nessuna voce'), findsOneWidget);
-  });
+      await tester.longPress(find.text('Nota controllo'));
+      await tester.pumpAndSettle();
 
-  testWidgets('User can add a symptom observation without triage', (
-    tester,
-  ) async {
-    await _pumpApp(tester);
+      expect(find.text('Eliminare questa voce?'), findsOneWidget);
 
-    await tester.tap(find.text('Accetta e continua'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Elimina'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Luna'));
-    await tester.pumpAndSettle();
+      expect(find.text('Nessuna nota salvata'), findsOneWidget);
+      expect(find.text('Nota controllo'), findsNothing);
+    },
+  );
 
-    expect(find.text('Sintomi'), findsOneWidget);
+  testWidgets(
+    'User can add a symptom observation without triage',
+    (tester) async {
+      await _pumpApp(tester);
 
-    await tester.tap(find.text('Sintomi'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Accetta e continua'));
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('non fa diagnosi'), findsOneWidget);
-    expect(find.text('Intensità'), findsOneWidget);
+      await tester.tap(find.text('Luna'));
+      await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextFormField).at(0), 'Tosse');
-    await tester.enterText(
-      find.byType(TextFormField).at(1),
-      'Osservata dopo passeggiata',
-    );
+      expect(find.text('Sintomi'), findsOneWidget);
 
-    await tester.tap(find.text('Salva voce'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Sintomi'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Tosse'), findsOneWidget);
-    expect(find.textContaining('Moderata'), findsWidgets);
-    expect(find.text('Osservata dopo passeggiata'), findsOneWidget);
-  });
+      expect(find.text('Registrati'), findsOneWidget);
+      expect(find.text('Nessun sintomo registrato'), findsOneWidget);
+      expect(
+        find.textContaining('Pet Life non li interpreta clinicamente'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byIcon(Icons.add).first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Annota un sintomo'), findsOneWidget);
+      expect(find.text('Cosa hai notato'), findsOneWidget);
+      expect(find.text('Tosse'), findsOneWidget);
+      expect(find.text('Altro'), findsOneWidget);
+
+      await tester.tap(find.text('Tosse'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Medio'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byType(TextFormField).first,
+        'Osservata dopo passeggiata',
+      );
+
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Salva'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tosse'), findsOneWidget);
+      expect(find.textContaining('Medio'), findsWidgets);
+      expect(find.text('Osservata dopo passeggiata'), findsOneWidget);
+      expect(find.textContaining('triage'), findsNothing);
+    },
+  );
 }
 
 Future<void> _pumpApp(WidgetTester tester) async {
-  await tester.binding.setSurfaceSize(const Size(900, 1200));
+  await tester.binding.setSurfaceSize(const Size(900, 1400));
+
   addTearDown(() async {
     await tester.binding.setSurfaceSize(null);
   });
@@ -143,8 +183,10 @@ void _seedPet() {
       'sex': 'unknown',
       'microchip': null,
       'vetName': null,
+      'profileImagePath': null,
+      'colorValue': 0xFF20B486,
       'archivedAt': null,
-    }
+    },
   ]);
 
   SharedPreferences.setMockInitialValues({
