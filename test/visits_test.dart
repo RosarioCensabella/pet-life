@@ -22,74 +22,222 @@ void main() {
     _seedPet();
   });
 
-  testWidgets('User can add and delete a vet visit without generated diagnosis', (
-    tester,
-  ) async {
-    await _pumpApp(tester);
+  testWidgets(
+    'User can add, calendar-sync, complete and delete a vet visit',
+    (tester) async {
+      await _pumpApp(tester);
 
-    await tester.tap(find.text('Accetta e continua'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Accetta e continua'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Luna'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Luna'));
+      await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Visite'));
-    await tester.pump(const Duration(milliseconds: 300));
+      await tester.ensureVisible(find.text('Visite'));
+      await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Visite'), findsOneWidget);
+      await tester.tap(find.text('Visite'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Visite'));
-    await tester.pumpAndSettle();
+      expect(find.text('Visite'), findsOneWidget);
+      expect(find.text('Nessuna visita'), findsOneWidget);
 
-    expect(find.text('Nessuna visita'), findsOneWidget);
-    expect(find.textContaining('non genera diagnosi'), findsOneWidget);
-    expect(find.textContaining('non fa triage'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.add).last);
+      await tester.pumpAndSettle();
 
-    await tester.enterText(
-      find.byType(TextFormField).at(0),
-      'Controllo annuale',
-    );
-    await tester.enterText(
-      find.byType(TextFormField).at(1),
-      'Clinica Pet Life',
-    );
-    await tester.enterText(
-      find.byType(TextFormField).at(2),
-      'Riepilogo fornito dal veterinario',
-    );
-    await tester.enterText(
-      find.byType(TextFormField).at(3),
-      'Portare libretto vaccinale',
-    );
+      expect(find.text('Aggiungi visita'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Salva visita'));
-    await tester.pump(const Duration(milliseconds: 300));
+      await tester.enterText(
+        find.byType(TextFormField).at(0),
+        'Controllo annuale',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(1),
+        'Dott.ssa Bianchi',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(2),
+        'Clinica Pet Life',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(3),
+        'Verifica generale e vaccini',
+      );
 
-    await tester.tap(find.text('Salva visita'));
-    await tester.pumpAndSettle();
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
 
-    expect(find.text('Controllo annuale'), findsOneWidget);
-    expect(find.textContaining('Clinica Pet Life'), findsOneWidget);
-    expect(
-      find.textContaining('Riepilogo fornito dal veterinario'),
-      findsOneWidget,
-    );
-    expect(find.text('Portare libretto vaccinale'), findsOneWidget);
+      await _tapVisible(tester, find.text('Salva visita'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.delete_outline).first);
-    await tester.pumpAndSettle();
+      expect(find.text('Controllo annuale'), findsOneWidget);
+      expect(find.textContaining('Dott.ssa Bianchi'), findsOneWidget);
+      expect(find.textContaining('Clinica Pet Life'), findsOneWidget);
+      expect(find.textContaining('Verifica generale e vaccini'), findsOneWidget);
+      expect(find.text('Aggiungi al calendario'), findsOneWidget);
+      expect(find.text('Svolta'), findsAtLeastNWidgets(1));
 
-    expect(find.text('Eliminare questa visita?'), findsOneWidget);
+      await tester.tap(find.text('Aggiungi al calendario'));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Elimina'));
-    await tester.pumpAndSettle();
+      expect(find.text('Rimuovi'), findsOneWidget);
 
-    expect(find.text('Nessuna visita'), findsOneWidget);
-  });
+      await tester.tap(find.text('Rimuovi'));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aggiungi al calendario'), findsOneWidget);
+
+      await _tapVisible(tester, find.text('Svolta'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Chiudi visita'), findsOneWidget);
+
+      await tester.enterText(
+        find.byType(TextFormField).at(0),
+        '65',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(1),
+        'Tutto ok. Controllo tra un anno.',
+      );
+
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
+
+      await _tapVisible(tester, find.text('Svolta'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('SVOLTA'), findsOneWidget);
+      expect(find.text('65,00 €'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('Tutto ok'), findsOneWidget);
+      expect(find.text('Aggiungi al calendario'), findsNothing);
+      expect(find.text('Rimuovi'), findsNothing);
+
+      await tester.tap(find.text('⋯').first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Modifica'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Modifica visita'), findsOneWidget);
+
+      await tester.enterText(
+        find.byType(TextFormField).at(0),
+        'Controllo annuale aggiornato',
+      );
+
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
+
+      await _tapVisible(tester, find.text('Aggiorna visita'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Controllo annuale aggiornato'), findsOneWidget);
+
+      await tester.tap(find.text('⋯').first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Elimina'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Eliminare questa visita?'), findsOneWidget);
+
+      await tester.tap(find.text('Elimina').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nessuna visita'), findsOneWidget);
+      expect(find.text('Controllo annuale aggiornato'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'User can add a past vet visit with amount',
+    (tester) async {
+      await _pumpApp(tester);
+
+      await tester.tap(find.text('Accetta e continua'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Luna'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Visite'));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.tap(find.text('Visite'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.add).last);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byType(TextFormField).at(0),
+        'Visita ortopedica',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(1),
+        'Dr. Marini',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(2),
+        'Clinica San Rocco',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(3),
+        'Zoppia leggera',
+      );
+
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Questa visita è già stata svolta'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byType(TextFormField).at(4),
+        'Articolazione anteriore ok',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(5),
+        '85',
+      );
+
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
+
+      await _tapVisible(tester, find.text('Salva visita'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('SVOLTA'), findsOneWidget);
+      expect(find.text('Visita ortopedica'), findsOneWidget);
+      expect(find.textContaining('Dr. Marini'), findsOneWidget);
+      expect(find.textContaining('Clinica San Rocco'), findsOneWidget);
+      expect(find.textContaining('Articolazione anteriore ok'), findsOneWidget);
+      expect(find.text('85,00 €'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('Speso in visite'), findsOneWidget);
+    },
+  );
+}
+
+Future<void> _tapVisible(
+  WidgetTester tester,
+  Finder finder,
+) async {
+  expect(finder, findsAtLeastNWidgets(1));
+
+  final target = finder.last;
+
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
+
+  await tester.tap(target);
 }
 
 Future<void> _pumpApp(WidgetTester tester) async {
-  await tester.binding.setSurfaceSize(const Size(900, 1400));
+  await tester.binding.setSurfaceSize(const Size(900, 1500));
+
   addTearDown(() async {
     await tester.binding.setSurfaceSize(null);
   });
@@ -133,8 +281,10 @@ void _seedPet() {
       'sex': 'female',
       'microchip': '123456789',
       'vetName': 'Dott.ssa Bianchi',
+      'profileImagePath': null,
+      'colorValue': 0xFFB084E8,
       'archivedAt': null,
-    }
+    },
   ]);
 
   SharedPreferences.setMockInitialValues({
@@ -157,6 +307,9 @@ class FakeNotificationPermissionService
 
 class FakeReminderNotificationScheduler
     implements ReminderNotificationScheduler {
+  final scheduledReminders = <Reminder>[];
+  final cancelledReminderIds = <String>[];
+
   @override
   Future<void> initialize() async {}
 
@@ -168,10 +321,14 @@ class FakeReminderNotificationScheduler
   @override
   Future<void> scheduleReminder({
     required Reminder reminder,
-  }) async {}
+  }) async {
+    scheduledReminders.add(reminder);
+  }
 
   @override
-  Future<void> cancelReminder(String reminderId) async {}
+  Future<void> cancelReminder(String reminderId) async {
+    cancelledReminderIds.add(reminderId);
+  }
 }
 
 class FakeDocumentFileService implements DocumentFileService {

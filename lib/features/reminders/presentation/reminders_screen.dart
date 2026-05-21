@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../shared/presentation/pet_life_navigation_bar.dart';
+import '../../documents/application/document_file_service.dart';
+import '../../documents/application/document_file_service_provider.dart';
+import '../../documents/application/pet_document_controller.dart';
+import '../../documents/domain/pet_document.dart';
+import '../../expenses/application/expense_controller.dart';
+import '../../expenses/domain/expense_entry.dart';
 import '../../pets/application/pet_controller.dart';
 import '../../pets/domain/pet.dart';
+import '../../visits/application/visit_controller.dart';
+import '../../visits/domain/visit_entry.dart';
 import '../application/reminder_controller.dart';
 import '../domain/reminder.dart';
 
@@ -58,6 +67,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   Widget build(BuildContext context) {
     final remindersState = ref.watch(reminderControllerProvider);
     final petsState = ref.watch(petControllerProvider);
+    ref.watch(visitControllerProvider);
 
     return Scaffold(
       backgroundColor: _ReminderPalette.background,
@@ -83,8 +93,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
 
                 final activeCount = sortedReminders
                     .where(
-                      (reminder) =>
-                          reminder.status == ReminderStatus.active,
+                      (reminder) => reminder.status == ReminderStatus.active,
                     )
                     .length;
 
@@ -238,6 +247,22 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
   }
 
   Future<void> _completeReminder(Reminder reminder) async {
+    final visitId = _visitIdFromReminder(reminder);
+
+    if (visitId != null) {
+      final visit = ref.read(visitControllerProvider.notifier).visitById(
+            visitId,
+          );
+
+      if (visit != null && visit.status == VisitStatus.scheduled) {
+        await _completeVisitReminder(
+          reminder: reminder,
+          visit: visit,
+        );
+        return;
+      }
+    }
+
     await ref
         .read(reminderControllerProvider.notifier)
         .completeReminder(reminder.id);
@@ -251,6 +276,152 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         content: Text('Promemoria completato'),
       ),
     );
+  }
+
+  Future<void> _completeVisitReminder({
+    required Reminder reminder,
+    required VisitEntry visit,
+  }) async {
+    final result = await showModalBottomSheet<_VisitReminderCompletionData>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return _VisitReminderCompletionSheet(visit: visit);
+      },
+    );
+
+    if (result == null || !mounted) {
+      return;
+    }
+
+    final now = DateTime.now();
+
+    if (visit.expenseEntryId != null) {
+      await ref
+          .read(expenseControllerProvider.notifier)
+          .deleteEntry(visit.expenseEntryId!);
+    }
+
+    final expenseEntryId = 'expense-visit-${visit.id}';
+    String? reportDocumentId = visit.reportDocumentId;
+
+    await ref.read(expenseControllerProvider.notifier).addEntry(
+          ExpenseEntry(
+            id: expenseEntryId,
+            petId: visit.petId,
+            petName: visit.petName,
+            category: ExpenseCategory.vet,
+            description: visit.reason,
+            amount: result.amount,
+            currency: result.currency,
+            expenseDate: now,
+            createdAt: now,
+            vendor: visit.clinicName,
+            notes: _optionalText(result.outcome),
+          ),
+        );
+
+    if (result.shouldAttachReport) {
+      final documentId = 'visit-report-${visit.id}-${now.microsecondsSinceEpoch}';
+
+      final pickedDocument = await ref
+          .read(documentFileServiceProvider)
+          .pickAndCopyDocument(
+            petId: visit.petId,
+            documentId: documentId,
+          );
+
+      if (pickedDocument is PickedLocalDocument) {
+        reportDocumentId = documentId;
+
+        await ref.read(petDocumentControllerProvider.notifier).addDocument(
+              PetDocument(
+                id: documentId,
+                petId: visit.petId,
+                petName: visit.petName,
+                title: 'Referto visita · ${visit.reason}',
+                category: PetDocumentCategory.labReport,
+                originalFileName: pickedDocument.originalFileName,
+                localPath: pickedDocument.localPath,
+                sizeBytes: pickedDocument.sizeBytes,
+                createdAt: now,
+                notes: 'Collegato a una visita',
+              ),
+            );
+      }
+    }
+
+    final updatedVisit = visit.copyWith(
+      status: VisitStatus.completed,
+      visitDate: visit.visitDate.isAfter(now) ? now : visit.visitDate,
+      completedAt: now,
+      outcome: _optionalText(result.outcome),
+      amount: result.amount,
+      currency: result.currency,
+      expenseEntryId: expenseEntryId,
+      reportDocumentId: reportDocumentId,
+      addToCalendar: false,
+      automaticReminderIds: const [],
+      updatedAt: now,
+    );
+
+    await ref.read(visitControllerProvider.notifier).updateEntry(updatedVisit);
+
+    final linkedReminderIds = <String>{
+      reminder.id,
+      ...visit.automaticReminderIds,
+      ..._linkedVisitReminderIds(visit),
+    };
+
+    await ref
+        .read(reminderControllerProvider.notifier)
+        .deleteReminders(linkedReminderIds.toList(growable: false));
+
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Visita segnata come svolta'),
+      ),
+    );
+  }
+
+  List<String> _linkedVisitReminderIds(VisitEntry visit) {
+    final reminders =
+        ref.read(reminderControllerProvider).valueOrNull ?? const <Reminder>[];
+
+    return reminders
+        .where(
+          (reminder) =>
+              reminder.id.startsWith('visit-${visit.id}-') ||
+              (reminder.notes?.contains('visitId:${visit.id}') ?? false),
+        )
+        .map((reminder) => reminder.id)
+        .toList(growable: false);
+  }
+
+  String? _visitIdFromReminder(Reminder reminder) {
+    final notes = reminder.notes ?? '';
+
+    for (final line in notes.split('\n')) {
+      final trimmed = line.trim();
+
+      if (trimmed.startsWith('visitId:')) {
+        return trimmed.substring('visitId:'.length).trim();
+      }
+    }
+
+    if (reminder.id.startsWith('visit-') && reminder.id.endsWith('-reminder')) {
+      return reminder.id.substring(
+        'visit-'.length,
+        reminder.id.length - '-reminder'.length,
+      );
+    }
+
+    return null;
   }
 
   Future<void> _postponeReminder(Reminder reminder) async {
@@ -314,6 +485,16 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     }
 
     return value[0].toUpperCase() + value.substring(1);
+  }
+
+  String? _optionalText(String? value) {
+    final trimmed = value?.trim() ?? '';
+
+    if (trimmed.isEmpty) {
+      return null;
+    }
+
+    return trimmed;
   }
 }
 
@@ -579,6 +760,7 @@ class _ReminderTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final iconData = _iconForCategory(reminder.category);
     final accent = _colorForCategory(reminder.category);
+
     final metaStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
           fontSize: 13,
           fontWeight: FontWeight.w600,
@@ -663,7 +845,7 @@ class _ReminderTile extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          '  ·  ',
+                          ' · ',
                           style: metaStyle,
                         ),
                         Expanded(
@@ -871,6 +1053,190 @@ class _ReminderMenuButton extends StatelessWidget {
   }
 }
 
+class _VisitReminderCompletionSheet extends StatefulWidget {
+  const _VisitReminderCompletionSheet({
+    required this.visit,
+  });
+
+  final VisitEntry visit;
+
+  @override
+  State<_VisitReminderCompletionSheet> createState() =>
+      _VisitReminderCompletionSheetState();
+}
+
+class _VisitReminderCompletionSheetState
+    extends State<_VisitReminderCompletionSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _amountController = TextEditingController();
+  final _outcomeController = TextEditingController();
+
+  String _currency = 'EUR';
+  bool _shouldAttachReport = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _currency = widget.visit.currency;
+    _amountController.text = widget.visit.amount == null
+        ? ''
+        : _formatNumber(widget.visit.amount!);
+    _outcomeController.text = widget.visit.outcome ?? '';
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _outcomeController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final isValid = _formKey.currentState?.validate() ?? false;
+
+    if (!isValid) {
+      return;
+    }
+
+    Navigator.of(context).pop(
+      _VisitReminderCompletionData(
+        amount: double.parse(
+          _amountController.text.trim().replaceAll(',', '.'),
+        ),
+        currency: _currency,
+        outcome: _outcomeController.text.trim(),
+        shouldAttachReport: _shouldAttachReport,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: _ReminderPalette.background,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.88,
+        ),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(22, 18, 22, 24),
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Chiudi visita',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: _ReminderPalette.darkText,
+                          fontWeight: FontWeight.w900,
+                        ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  Text(
+                    widget.visit.reason,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: _ReminderPalette.darkText,
+                          fontWeight: FontWeight.w900,
+                        ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _amountController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
+                    ],
+                    decoration: const InputDecoration(
+                      labelText: 'Importo',
+                      hintText: '65,00',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      final amount = double.tryParse(
+                        (value ?? '').trim().replaceAll(',', '.'),
+                      );
+
+                      if (amount == null || amount < 0) {
+                        return 'Inserisci un importo valido';
+                      }
+
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _outcomeController,
+                    decoration: const InputDecoration(
+                      labelText: 'Esito / riepilogo',
+                      hintText:
+                          'Inserisci solo informazioni fornite dal veterinario.',
+                      border: OutlineInputBorder(),
+                    ),
+                    minLines: 2,
+                    maxLines: 4,
+                  ),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    value: _shouldAttachReport,
+                    onChanged: (value) {
+                      setState(() {
+                        _shouldAttachReport = value;
+                      });
+                    },
+                    title: const Text('Carica referto'),
+                    subtitle: const Text(
+                      'Potrai selezionare un documento dopo il salvataggio.',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: _save,
+                    child: const Text('Svolta'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VisitReminderCompletionData {
+  const _VisitReminderCompletionData({
+    required this.amount,
+    required this.currency,
+    required this.outcome,
+    required this.shouldAttachReport,
+  });
+
+  final double amount;
+  final String currency;
+  final String outcome;
+  final bool shouldAttachReport;
+}
+
 class _EmptyRemindersState extends StatelessWidget {
   const _EmptyRemindersState({
     required this.title,
@@ -966,10 +1332,19 @@ class _ReminderPalette {
   static const chip = Color(0xFFF2EAD8);
   static const selectedChip = Color(0xFF2C2418);
   static const outline = Color(0xFFE6D9BE);
+
   static const darkText = Color(0xFF33291F);
   static const secondaryText = Color(0xFF8C7A66);
 
   static const orange = Color(0xFFE9B14A);
   static const purple = Color(0xFFB38BE8);
   static const green = Color(0xFFA8CDAF);
+}
+
+String _formatNumber(double value) {
+  if (value % 1 == 0) {
+    return value.toStringAsFixed(0);
+  }
+
+  return value.toStringAsFixed(2).replaceAll('.', ',');
 }

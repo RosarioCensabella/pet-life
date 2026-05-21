@@ -7,7 +7,6 @@ import '../domain/food_entry.dart';
 final foodLocalStorageProvider = FutureProvider<FoodLocalStorage>(
   (ref) async {
     final preferences = await ref.watch(sharedPreferencesProvider.future);
-
     return FoodLocalStorage(preferences: preferences);
   },
 );
@@ -17,7 +16,6 @@ final foodControllerProvider =
   (ref) {
     final controller = FoodController(ref: ref);
     controller.loadEntries();
-
     return controller;
   },
 );
@@ -42,22 +40,76 @@ class FoodController extends StateNotifier<AsyncValue<List<FoodEntry>>> {
   }
 
   List<FoodEntry> entriesForPet(String petId) {
-    final entries = state.valueOrNull ?? const [];
+    final entries = state.valueOrNull ?? const <FoodEntry>[];
 
     return entries
         .where((entry) => entry.petId == petId)
         .toList(growable: false);
   }
 
+  FoodEntry? entryForPet(String petId) {
+    final entries = state.valueOrNull ?? const <FoodEntry>[];
+
+    for (final entry in entries) {
+      if (entry.petId == petId) {
+        return entry;
+      }
+    }
+
+    return null;
+  }
+
   Future<void> addEntry(FoodEntry entry) async {
-    final currentEntries = state.valueOrNull ?? const [];
+    await _ensureLoaded();
+
+    final currentEntries = state.valueOrNull ?? const <FoodEntry>[];
     final updatedEntries = [...currentEntries, entry];
 
     await _saveAndEmit(updatedEntries);
   }
 
+  Future<void> updateEntry(FoodEntry updatedEntry) async {
+    await _ensureLoaded();
+
+    final currentEntries = state.valueOrNull ?? const <FoodEntry>[];
+    var wasUpdated = false;
+
+    final updatedEntries = currentEntries.map((entry) {
+      if (entry.id == updatedEntry.id) {
+        wasUpdated = true;
+        return updatedEntry;
+      }
+
+      return entry;
+    }).toList(growable: false);
+
+    if (!wasUpdated) {
+      await _saveAndEmit([...updatedEntries, updatedEntry]);
+      return;
+    }
+
+    await _saveAndEmit(updatedEntries);
+  }
+
+  Future<void> upsertEntry(FoodEntry entry) async {
+    await _ensureLoaded();
+
+    final currentEntries = state.valueOrNull ?? const <FoodEntry>[];
+    final exists = currentEntries.any((item) => item.id == entry.id);
+
+    if (exists) {
+      await updateEntry(entry);
+      return;
+    }
+
+    await addEntry(entry);
+  }
+
   Future<void> deleteEntry(String entryId) async {
-    final currentEntries = state.valueOrNull ?? const [];
+    await _ensureLoaded();
+
+    final currentEntries = state.valueOrNull ?? const <FoodEntry>[];
+
     final updatedEntries = currentEntries
         .where((entry) => entry.id != entryId)
         .toList(growable: false);
@@ -65,9 +117,14 @@ class FoodController extends StateNotifier<AsyncValue<List<FoodEntry>>> {
     await _saveAndEmit(updatedEntries);
   }
 
+  Future<void> _ensureLoaded() async {
+    if (state.isLoading || state.valueOrNull == null) {
+      await loadEntries();
+    }
+  }
+
   Future<void> _saveAndEmit(List<FoodEntry> entries) async {
     final sortedEntries = _sortEntries(entries);
-
     state = AsyncValue.data(sortedEntries);
 
     try {
@@ -81,7 +138,12 @@ class FoodController extends StateNotifier<AsyncValue<List<FoodEntry>>> {
   List<FoodEntry> _sortEntries(List<FoodEntry> entries) {
     final sorted = [...entries];
 
-    sorted.sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+    sorted.sort((a, b) {
+      final first = b.updatedAt ?? b.createdAt;
+      final second = a.updatedAt ?? a.createdAt;
+
+      return first.compareTo(second);
+    });
 
     return sorted;
   }

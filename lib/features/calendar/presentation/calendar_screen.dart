@@ -5,15 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../app/theme.dart';
-import '../../../generated/l10n/app_localizations.dart';
 import '../../../shared/presentation/pet_life_navigation_bar.dart';
 import '../../documents/application/pet_document_controller.dart';
 import '../../documents/domain/pet_document.dart';
 import '../../expenses/application/expense_controller.dart';
 import '../../expenses/domain/expense_entry.dart';
-import '../../food/application/food_controller.dart';
-import '../../food/domain/food_entry.dart';
 import '../../health/application/health_controller.dart';
 import '../../health/domain/health_entry.dart';
 import '../../medications/application/medication_controller.dart';
@@ -22,8 +18,6 @@ import '../../pets/application/pet_controller.dart';
 import '../../pets/domain/pet.dart';
 import '../../reminders/application/reminder_controller.dart';
 import '../../reminders/domain/reminder.dart';
-import '../../visits/application/visit_controller.dart';
-import '../../visits/domain/visit_entry.dart';
 import '../../weight/application/weight_controller.dart';
 import '../../weight/domain/weight_entry.dart';
 
@@ -43,7 +37,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final strings = _CalendarStrings.of(context);
 
     final petsState = ref.watch(petControllerProvider);
@@ -51,16 +44,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final documentsState = ref.watch(petDocumentControllerProvider);
     final weightState = ref.watch(weightControllerProvider);
     final healthState = ref.watch(healthControllerProvider);
-    final foodState = ref.watch(foodControllerProvider);
     final medicationsState = ref.watch(medicationControllerProvider);
-    final visitsState = ref.watch(visitControllerProvider);
     final expensesState = ref.watch(expenseControllerProvider);
 
     return Scaffold(
       backgroundColor: _CalendarPalette.background,
       body: SafeArea(
         child: petsState.when(
-          loading: () => Center(child: Text(l10n.loadingPets)),
+          loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stackTrace) => _ErrorState(error: error),
           data: (pets) {
             final activePets =
@@ -81,12 +72,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               visibleEndDate: visibleRange.end,
               automaticMedicationReminderIds: automaticMedicationReminderIds,
               reminders: remindersState.valueOrNull ?? const <Reminder>[],
-              documents: documentsState.valueOrNull ?? const <PetDocument>[],
-              weightEntries: weightState.valueOrNull ?? const <WeightEntry>[],
-              healthEntries: healthState.valueOrNull ?? const <HealthEntry>[],
-              foodEntries: foodState.valueOrNull ?? const <FoodEntry>[],
+              documents:
+                  documentsState.valueOrNull ?? const <PetDocument>[],
+              weightEntries:
+                  weightState.valueOrNull ?? const <WeightEntry>[],
+              healthEntries:
+                  healthState.valueOrNull ?? const <HealthEntry>[],
               medicationEntries: medicationEntries,
-              visitEntries: visitsState.valueOrNull ?? const <VisitEntry>[],
               expenseEntries:
                   expensesState.valueOrNull ?? const <ExpenseEntry>[],
             );
@@ -111,28 +103,19 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             final visibleEvents =
                 isShowingWholeMonth ? monthEvents : selectedDayEvents;
 
-            final isLoading = _hasAnyLoadingState(
-              remindersState,
-              documentsState,
-              weightState,
-              healthState,
-              foodState,
-              medicationsState,
-              visitsState,
-              expensesState,
-            );
+            final isLoading = remindersState.isLoading ||
+                documentsState.isLoading ||
+                weightState.isLoading ||
+                healthState.isLoading ||
+                medicationsState.isLoading ||
+                expensesState.isLoading;
 
             return ListView(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
               children: [
-                _CalendarCompatibilityTexts(
-                  allEvents: filteredEvents,
-                  strings: strings,
-                ),
                 _CalendarHeader(
                   focusedMonth: _focusedMonth,
                   strings: strings,
-                  showCompatibilityMonthText: !isShowingWholeMonth,
                   onPreviousMonth: () {
                     setState(() {
                       _focusedMonth = DateTime(
@@ -154,7 +137,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 _PetFilterRow(
                   pets: activePets,
                   selectedPetId: _selectedPetId,
-                  allPetsLabel: l10n.allPets,
+                  allPetsLabel: strings.allPets,
                   onSelected: (petId) {
                     setState(() {
                       _selectedPetId = petId;
@@ -169,6 +152,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   onDateSelected: (date) {
                     setState(() {
                       _selectedDate = date;
+
                       if (date.month != _focusedMonth.month ||
                           date.year != _focusedMonth.year) {
                         _focusedMonth = DateTime(date.year, date.month);
@@ -195,8 +179,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 const SizedBox(height: 10),
                 if (visibleEvents.isEmpty)
                   _EmptyCalendarCard(
-                    title: l10n.calendarEmptyTitle,
-                    description: l10n.calendarEmptyDescription,
+                    title: strings.emptyTitle,
+                    description: strings.emptyDescription,
                   )
                 else
                   _DayEventsCard(
@@ -211,8 +195,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         if (isShowingWholeMonth) {
                           final currentToday = _dateOnly(DateTime.now());
                           _selectedDate = currentToday;
-                          _focusedMonth =
-                              DateTime(currentToday.year, currentToday.month);
+                          _focusedMonth = DateTime(
+                            currentToday.year,
+                            currentToday.month,
+                          );
                         } else {
                           _selectedDate = null;
                         }
@@ -234,26 +220,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         selectedDestination: PetLifeDestination.calendar,
       ),
     );
-  }
-
-  bool _hasAnyLoadingState(
-    AsyncValue<List<Reminder>> remindersState,
-    AsyncValue<List<PetDocument>> documentsState,
-    AsyncValue<List<WeightEntry>> weightState,
-    AsyncValue<List<HealthEntry>> healthState,
-    AsyncValue<List<FoodEntry>> foodState,
-    AsyncValue<List<MedicationEntry>> medicationsState,
-    AsyncValue<List<VisitEntry>> visitsState,
-    AsyncValue<List<ExpenseEntry>> expensesState,
-  ) {
-    return remindersState.isLoading ||
-        documentsState.isLoading ||
-        weightState.isLoading ||
-        healthState.isLoading ||
-        foodState.isLoading ||
-        medicationsState.isLoading ||
-        visitsState.isLoading ||
-        expensesState.isLoading;
   }
 
   List<_CalendarEvent> _filterEventsByPet(List<_CalendarEvent> events) {
@@ -294,6 +260,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         .toList(growable: false);
 
     dayEvents.sort((a, b) => a.date.compareTo(b.date));
+
     return dayEvents;
   }
 
@@ -310,6 +277,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         .toList(growable: false);
 
     monthEvents.sort((a, b) => a.date.compareTo(b.date));
+
     return monthEvents;
   }
 
@@ -335,9 +303,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     required List<PetDocument> documents,
     required List<WeightEntry> weightEntries,
     required List<HealthEntry> healthEntries,
-    required List<FoodEntry> foodEntries,
     required List<MedicationEntry> medicationEntries,
-    required List<VisitEntry> visitEntries,
     required List<ExpenseEntry> expenseEntries,
   }) {
     final petById = {
@@ -351,7 +317,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         continue;
       }
 
+      if (reminder.status != ReminderStatus.active) {
+        continue;
+      }
+
       final pet = petById[reminder.petId];
+
       if (pet == null) {
         continue;
       }
@@ -374,6 +345,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     for (final document in documents) {
       final pet = petById[document.petId];
+
       if (pet == null) {
         continue;
       }
@@ -395,6 +367,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     for (final entry in weightEntries) {
       final pet = petById[entry.petId];
+
       if (pet == null) {
         continue;
       }
@@ -416,9 +389,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     for (final entry in healthEntries) {
       final pet = petById[entry.petId];
+
       if (pet == null) {
         continue;
       }
+
+      final isSymptom = entry.type == HealthEntryType.symptom;
 
       events.add(
         _CalendarEvent(
@@ -428,35 +404,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           petColorValue: pet.colorValue,
           title: entry.title,
           subtitle:
-              '${pet.name} · ${entry.type == HealthEntryType.symptom ? strings.symptom : strings.healthDiary}',
+              '${pet.name} · ${isSymptom ? strings.symptom : strings.healthDiary}',
           date: entry.recordedAt,
-          route: entry.type == HealthEntryType.symptom
+          route: isSymptom
               ? '/pets/${pet.id}/symptoms'
-              : '/pets/${pet.id}/health',
-          icon: entry.type == HealthEntryType.symptom
-              ? Icons.visibility_outlined
-              : Icons.edit_note_outlined,
-        ),
-      );
-    }
-
-    for (final entry in foodEntries) {
-      final pet = petById[entry.petId];
-      if (pet == null) {
-        continue;
-      }
-
-      events.add(
-        _CalendarEvent(
-          id: 'food-${entry.id}',
-          petId: pet.id,
-          petName: pet.name,
-          petColorValue: pet.colorValue,
-          title: entry.foodName,
-          subtitle: '${pet.name} · ${strings.food}',
-          date: entry.recordedAt,
-          route: '/pets/${pet.id}/food',
-          icon: Icons.restaurant_outlined,
+              : '/pets/${pet.id}/health-diary',
+          icon:
+              isSymptom ? Icons.visibility_outlined : Icons.edit_note_outlined,
         ),
       );
     }
@@ -484,8 +438,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           for (final reminderTime in medication.reminderTimes) {
             events.add(
               _CalendarEvent(
-                id:
-                    'medication-${medication.id}-${day.toIso8601String()}-${reminderTime.hour}-${reminderTime.minute}',
+                id: 'medication-${medication.id}-${day.toIso8601String()}-${reminderTime.hour}-${reminderTime.minute}',
                 petId: pet.id,
                 petName: pet.name,
                 petColorValue: pet.colorValue,
@@ -499,7 +452,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   reminderTime.minute,
                 ),
                 route: '/pets/${pet.id}/medications',
-                icon: Icons.link_rounded,
+                icon: Icons.medication_liquid_outlined,
               ),
             );
           }
@@ -509,45 +462,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       }
     }
 
-    for (final entry in visitEntries) {
-      final pet = petById[entry.petId];
-      if (pet == null) {
-        continue;
-      }
-
-      events.add(
-        _CalendarEvent(
-          id: 'visit-${entry.id}',
-          petId: pet.id,
-          petName: pet.name,
-          petColorValue: pet.colorValue,
-          title: entry.reason,
-          subtitle: '${pet.name} · ${strings.visit}',
-          date: entry.visitDate,
-          route: '/pets/${pet.id}/visits',
-          icon: Icons.local_hospital_outlined,
-        ),
-      );
-
-      if (entry.nextVisitDate != null) {
-        events.add(
-          _CalendarEvent(
-            id: 'next-visit-${entry.id}',
-            petId: pet.id,
-            petName: pet.name,
-            petColorValue: pet.colorValue,
-            title: entry.reason,
-            subtitle: '${pet.name} · ${strings.nextVisit}',
-            date: entry.nextVisitDate!,
-            route: '/pets/${pet.id}/visits',
-            icon: Icons.event_available_outlined,
-          ),
-        );
-      }
-    }
-
     for (final entry in expenseEntries) {
       final pet = petById[entry.petId];
+
       if (pet == null) {
         continue;
       }
@@ -568,6 +485,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     }
 
     events.sort((a, b) => a.date.compareTo(b.date));
+
     return events;
   }
 }
@@ -576,14 +494,12 @@ class _CalendarHeader extends StatelessWidget {
   const _CalendarHeader({
     required this.focusedMonth,
     required this.strings,
-    required this.showCompatibilityMonthText,
     required this.onPreviousMonth,
     required this.onNextMonth,
   });
 
   final DateTime focusedMonth;
   final _CalendarStrings strings;
-  final bool showCompatibilityMonthText;
   final VoidCallback onPreviousMonth;
   final VoidCallback onNextMonth;
 
@@ -595,36 +511,14 @@ class _CalendarHeader extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Text(
-                _capitalize(monthLabel),
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontSize: 25,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.8,
-                      color: _CalendarPalette.darkText,
-                    ),
-              ),
-              if (showCompatibilityMonthText)
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  child: ExcludeSemantics(
-                    child: IgnorePointer(
-                      child: Text(
-                        'Eventi del mese',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.transparent,
-                              fontSize: 0.1,
-                              height: 1,
-                            ),
-                      ),
-                    ),
-                  ),
+          child: Text(
+            _capitalize(monthLabel),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontSize: 25,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
+                  color: _CalendarPalette.darkText,
                 ),
-            ],
           ),
         ),
         _MonthButton(
@@ -639,6 +533,42 @@ class _CalendarHeader extends StatelessWidget {
           onPressed: onNextMonth,
         ),
       ],
+    );
+  }
+}
+
+class _MonthButton extends StatelessWidget {
+  const _MonthButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: _CalendarPalette.chip,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onPressed,
+          child: SizedBox(
+            width: 36,
+            height: 36,
+            child: Icon(
+              icon,
+              color: _CalendarPalette.darkText,
+              size: 21,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -700,7 +630,8 @@ class _FilterChipButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final background =
         selected ? _CalendarPalette.darkText : _CalendarPalette.chip;
-    final foreground = selected ? Colors.white : _CalendarPalette.secondaryText;
+    final foreground =
+        selected ? Colors.white : _CalendarPalette.secondaryText;
 
     return Padding(
       padding: const EdgeInsets.only(right: 7),
@@ -798,7 +729,6 @@ class _MonthCalendar extends StatelessWidget {
             final isToday = _dateOnly(DateTime.now()) == day;
 
             return _CalendarDayCell(
-              key: ValueKey(_calendarDayKey(day)),
               date: day,
               dayEvents: dayEvents,
               isCurrentMonth: isCurrentMonth,
@@ -817,15 +747,16 @@ class _MonthCalendar extends StatelessWidget {
 
     return List.generate(
       7,
-      (index) => DateFormat.E(locale).format(monday.add(Duration(days: index))),
+      (index) => DateFormat.E(locale).format(
+        monday.add(Duration(days: index)),
+      ),
     );
   }
 
   List<DateTime> _visibleDates(DateTime focusedMonth) {
     final firstDayOfMonth = DateTime(focusedMonth.year, focusedMonth.month);
     final daysBefore = firstDayOfMonth.weekday - DateTime.monday;
-    final firstVisibleDay =
-        firstDayOfMonth.subtract(Duration(days: daysBefore));
+    final firstVisibleDay = firstDayOfMonth.subtract(Duration(days: daysBefore));
 
     return List.generate(
       42,
@@ -842,7 +773,6 @@ class _CalendarDayCell extends StatelessWidget {
     required this.isSelected,
     required this.isToday,
     required this.onTap,
-    super.key,
   });
 
   final DateTime date;
@@ -906,8 +836,7 @@ class _CalendarDayCell extends StatelessWidget {
               Text(
                 date.day.toString(),
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color:
-                          hasEvents ? Colors.white : _CalendarPalette.darkText,
+                      color: hasEvents ? Colors.white : _CalendarPalette.darkText,
                       fontWeight: FontWeight.w900,
                     ),
               ),
@@ -1006,51 +935,18 @@ class _SelectedDayHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context).toLanguageTag();
-    final today = _dateOnly(DateTime.now());
-    final selectedDay = _dateOnly(date);
-    final isToday = today == selectedDay;
     final dateLabel = DateFormat('d MMMM', locale).format(date);
-
-    final visibleTitle = isToday
-        ? '${strings.today} · $dateLabel'
-        : '${strings.dayEvents} · $dateLabel';
-
-    final needsItalianCompatibilityText =
-        !visibleTitle.contains('Eventi del giorno');
 
     return Row(
       children: [
         Expanded(
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Text(
-                visibleTitle,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.3,
-                      color: _CalendarPalette.darkText,
-                    ),
-              ),
-              if (needsItalianCompatibilityText)
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  child: ExcludeSemantics(
-                    child: IgnorePointer(
-                      child: Text(
-                        'Eventi del giorno',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: Colors.transparent,
-                                  fontSize: 0.1,
-                                  height: 1,
-                                ),
-                      ),
-                    ),
-                  ),
+          child: Text(
+            '${strings.dayEvents} · $dateLabel',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.3,
+                  color: _CalendarPalette.darkText,
                 ),
-            ],
           ),
         ),
         Text(
@@ -1099,8 +995,6 @@ class _DayEventsCard extends StatelessWidget {
                   height: 1,
                   thickness: 1,
                   color: _CalendarPalette.outline,
-                  indent: 0,
-                  endIndent: 0,
                 ),
             ],
           ],
@@ -1180,12 +1074,13 @@ class _CalendarEventRow extends StatelessWidget {
                         event.subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontSize: 12,
-                              height: 1.1,
-                              color: _CalendarPalette.secondaryText,
-                              fontWeight: FontWeight.w500,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  fontSize: 12,
+                                  height: 1.1,
+                                  color: _CalendarPalette.secondaryText,
+                                  fontWeight: FontWeight.w500,
+                                ),
                       ),
                     ],
                   ),
@@ -1218,7 +1113,7 @@ class _CalendarLoadingCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: _CalendarPalette.card,
-        borderRadius: BorderRadius.circular(PetLifeDesign.radiusLarge),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: _CalendarPalette.outline),
       ),
       child: const Padding(
@@ -1271,6 +1166,7 @@ class _EmptyCalendarCard extends StatelessWidget {
                 '$title. $description',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: _CalendarPalette.secondaryText,
+                      height: 1.35,
                     ),
               ),
             ),
@@ -1281,83 +1177,21 @@ class _EmptyCalendarCard extends StatelessWidget {
   }
 }
 
-class _MonthButton extends StatelessWidget {
-  const _MonthButton({
-    required this.tooltip,
-    required this.icon,
-    required this.onPressed,
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({
+    required this.error,
   });
 
-  final String tooltip;
-  final IconData icon;
-  final VoidCallback onPressed;
+  final Object error;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: _CalendarPalette.chip,
-      shape: const CircleBorder(),
-      child: IconButton(
-        tooltip: tooltip,
-        onPressed: onPressed,
-        icon: Icon(
-          icon,
-          color: _CalendarPalette.secondaryText,
-        ),
-      ),
-    );
-  }
-}
-
-class _CalendarCompatibilityTexts extends StatelessWidget {
-  const _CalendarCompatibilityTexts({
-    required this.allEvents,
-    required this.strings,
-  });
-
-  final List<_CalendarEvent> allEvents;
-  final _CalendarStrings strings;
-
-  @override
-  Widget build(BuildContext context) {
-    const hiddenTextStyle = TextStyle(
-      fontSize: 0.1,
-      height: 1,
-      color: Colors.transparent,
-    );
-
-    return ExcludeSemantics(
-      child: IgnorePointer(
-        child: SizedBox(
-          height: 1,
-          width: 1,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Text(
-                strings.legend,
-                style: hiddenTextStyle,
-              ),
-              Positioned(
-                left: 0,
-                top: 0,
-                child: Text(
-                  strings.medicationOccurrencesNote,
-                  style: hiddenTextStyle,
-                ),
-              ),
-              ...allEvents.map(
-                (event) => Positioned(
-                  left: 0,
-                  top: 0,
-                  child: Text(
-                    event.title,
-                    style: hiddenTextStyle,
-                  ),
-                ),
-              ),
-            ],
-          ),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          error.toString(),
+          textAlign: TextAlign.center,
         ),
       ),
     );
@@ -1398,24 +1232,105 @@ class _DateRange {
   final DateTime end;
 }
 
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({
-    required this.error,
+class _CalendarStrings {
+  const _CalendarStrings({
+    required this.allPets,
+    required this.monthEvents,
+    required this.dayEvents,
+    required this.eventsShort,
+    required this.today,
+    required this.showWholeMonth,
+    required this.previousMonth,
+    required this.nextMonth,
+    required this.emptyTitle,
+    required this.emptyDescription,
+    required this.document,
+    required this.weight,
+    required this.symptom,
+    required this.healthDiary,
+    required this.medicationReminder,
+    required this.expense,
   });
 
-  final Object error;
+  final String allPets;
+  final String monthEvents;
+  final String dayEvents;
+  final String eventsShort;
+  final String today;
+  final String showWholeMonth;
+  final String previousMonth;
+  final String nextMonth;
+  final String emptyTitle;
+  final String emptyDescription;
+  final String document;
+  final String weight;
+  final String symptom;
+  final String healthDiary;
+  final String medicationReminder;
+  final String expense;
 
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(
-          error.toString(),
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: _CalendarPalette.darkText),
-        ),
-      ),
+  String reminderCategoryLabel(ReminderCategory category) {
+    switch (category) {
+      case ReminderCategory.vaccine:
+        return 'Vaccino';
+      case ReminderCategory.antiparasitic:
+        return 'Antiparassitario';
+      case ReminderCategory.vetVisit:
+        return 'Visita veterinaria';
+      case ReminderCategory.checkup:
+        return 'Controllo';
+      case ReminderCategory.medication:
+        return 'Farmaco';
+      case ReminderCategory.insurance:
+        return 'Assicurazione';
+      case ReminderCategory.grooming:
+        return 'Toelettatura';
+      case ReminderCategory.custom:
+        return 'Promemoria';
+    }
+  }
+
+  static _CalendarStrings of(BuildContext context) {
+    final languageCode = Localizations.localeOf(context).languageCode;
+
+    if (languageCode == 'en') {
+      return const _CalendarStrings(
+        allPets: 'All',
+        monthEvents: 'Monthly events',
+        dayEvents: 'Daily events',
+        eventsShort: 'events',
+        today: 'Today',
+        showWholeMonth: 'Show whole month',
+        previousMonth: 'Previous month',
+        nextMonth: 'Next month',
+        emptyTitle: 'No events',
+        emptyDescription: 'There are no events for the selected period',
+        document: 'Document',
+        weight: 'Weight',
+        symptom: 'Symptom',
+        healthDiary: 'Health diary',
+        medicationReminder: 'Medication',
+        expense: 'Expense',
+      );
+    }
+
+    return const _CalendarStrings(
+      allPets: 'Tutti',
+      monthEvents: 'Eventi del mese',
+      dayEvents: 'Eventi del giorno',
+      eventsShort: 'eventi',
+      today: 'Oggi',
+      showWholeMonth: 'Mostra tutto il mese',
+      previousMonth: 'Mese precedente',
+      nextMonth: 'Mese successivo',
+      emptyTitle: 'Nessun evento',
+      emptyDescription: 'Non ci sono eventi nel periodo selezionato',
+      document: 'Documento',
+      weight: 'Peso',
+      symptom: 'Sintomo',
+      healthDiary: 'Diario salute',
+      medicationReminder: 'Farmaco',
+      expense: 'Spesa',
     );
   }
 }
@@ -1425,322 +1340,26 @@ class _CalendarPalette {
 
   static const background = Color(0xFFF8F1E2);
   static const card = Color(0xFFFFFFFF);
-  static const chip = Color(0xFFF3E8D1);
+  static const chip = Color(0xFFF0E6D0);
   static const outline = Color(0xFFE3D2B4);
+
   static const darkText = Color(0xFF2D2418);
   static const secondaryText = Color(0xFF8B7A63);
-  static const mutedText = Color(0xFFAD9D87);
-}
-
-class _CalendarStrings {
-  const _CalendarStrings({
-    required this.eventsShort,
-    required this.today,
-    required this.dayEvents,
-    required this.showWholeMonth,
-    required this.previousMonth,
-    required this.nextMonth,
-    required this.monthEvents,
-    required this.legend,
-    required this.medicationOccurrencesNote,
-    required this.reminder,
-    required this.document,
-    required this.weight,
-    required this.healthDiary,
-    required this.symptom,
-    required this.food,
-    required this.medicationReminder,
-    required this.visit,
-    required this.nextVisit,
-    required this.expense,
-    required this.vaccine,
-    required this.antiparasitic,
-    required this.vetVisit,
-    required this.checkup,
-    required this.medication,
-    required this.insurance,
-    required this.grooming,
-    required this.custom,
-    required this.active,
-    required this.completed,
-    required this.postponed,
-    required this.skipped,
-    required this.healthRecord,
-    required this.labReport,
-    required this.prescription,
-    required this.invoice,
-    required this.other,
-    required this.breakfast,
-    required this.lunch,
-    required this.dinner,
-    required this.snack,
-    required this.routine,
-    required this.followUp,
-    required this.urgent,
-    required this.vet,
-    required this.accessories,
-  });
-
-  final String eventsShort;
-  final String today;
-  final String dayEvents;
-  final String showWholeMonth;
-  final String previousMonth;
-  final String nextMonth;
-  final String monthEvents;
-  final String legend;
-  final String medicationOccurrencesNote;
-  final String reminder;
-  final String document;
-  final String weight;
-  final String healthDiary;
-  final String symptom;
-  final String food;
-  final String medicationReminder;
-  final String visit;
-  final String nextVisit;
-  final String expense;
-  final String vaccine;
-  final String antiparasitic;
-  final String vetVisit;
-  final String checkup;
-  final String medication;
-  final String insurance;
-  final String grooming;
-  final String custom;
-  final String active;
-  final String completed;
-  final String postponed;
-  final String skipped;
-  final String healthRecord;
-  final String labReport;
-  final String prescription;
-  final String invoice;
-  final String other;
-  final String breakfast;
-  final String lunch;
-  final String dinner;
-  final String snack;
-  final String routine;
-  final String followUp;
-  final String urgent;
-  final String vet;
-  final String accessories;
-
-  String reminderCategoryLabel(ReminderCategory category) {
-    return switch (category) {
-      ReminderCategory.vaccine => vaccine,
-      ReminderCategory.antiparasitic => antiparasitic,
-      ReminderCategory.vetVisit => vetVisit,
-      ReminderCategory.checkup => checkup,
-      ReminderCategory.medication => medication,
-      ReminderCategory.insurance => insurance,
-      ReminderCategory.grooming => grooming,
-      ReminderCategory.custom => custom,
-    };
-  }
-
-  String reminderStatusLabel(ReminderStatus status) {
-    return switch (status) {
-      ReminderStatus.active => active,
-      ReminderStatus.completed => completed,
-      ReminderStatus.postponed => postponed,
-      ReminderStatus.skipped => skipped,
-    };
-  }
-
-  String documentCategoryLabel(PetDocumentCategory category) {
-    return switch (category) {
-      PetDocumentCategory.healthRecord => healthRecord,
-      PetDocumentCategory.labReport => labReport,
-      PetDocumentCategory.prescription => prescription,
-      PetDocumentCategory.insurance => insurance,
-      PetDocumentCategory.invoice => invoice,
-      PetDocumentCategory.other => other,
-    };
-  }
-
-  String mealTypeLabel(MealType mealType) {
-    return switch (mealType) {
-      MealType.breakfast => breakfast,
-      MealType.lunch => lunch,
-      MealType.dinner => dinner,
-      MealType.snack => snack,
-      MealType.other => other,
-    };
-  }
-
-  String visitTypeLabel(VisitType visitType) {
-    return switch (visitType) {
-      VisitType.routine => routine,
-      VisitType.vaccine => vaccine,
-      VisitType.checkup => checkup,
-      VisitType.followUp => followUp,
-      VisitType.urgent => urgent,
-      VisitType.other => other,
-    };
-  }
-
-  String expenseCategoryLabel(ExpenseCategory category) {
-    return switch (category) {
-      ExpenseCategory.vet => vet,
-      ExpenseCategory.medication => medication,
-      ExpenseCategory.food => food,
-      ExpenseCategory.grooming => grooming,
-      ExpenseCategory.insurance => insurance,
-      ExpenseCategory.documents => document,
-      ExpenseCategory.accessories => accessories,
-      ExpenseCategory.other => other,
-    };
-  }
-
-  static _CalendarStrings of(BuildContext context) {
-    final languageCode = Localizations.localeOf(context).languageCode;
-
-    if (languageCode == 'en') {
-      return const _CalendarStrings(
-        eventsShort: 'events',
-        today: 'Today',
-        dayEvents: 'Day events',
-        showWholeMonth: 'Show whole month',
-        previousMonth: 'Previous month',
-        nextMonth: 'Next month',
-        monthEvents: 'Month events',
-        legend:
-            'If multiple pets have items on the same day, the circle is split into colored segments. This view does not provide diagnosis.',
-        medicationOccurrencesNote:
-            'Medication therapies are shown as daily reminder occurrences.',
-        reminder: 'Reminder',
-        document: 'Document',
-        weight: 'Weight',
-        healthDiary: 'Health diary',
-        symptom: 'Symptom',
-        food: 'Food',
-        medicationReminder: 'Medication',
-        visit: 'Visit',
-        nextVisit: 'Next visit',
-        expense: 'Expense',
-        vaccine: 'Vaccine',
-        antiparasitic: 'Antiparasitic',
-        vetVisit: 'Vet visit',
-        checkup: 'Checkup',
-        medication: 'Medication',
-        insurance: 'Insurance',
-        grooming: 'Grooming',
-        custom: 'Custom',
-        active: 'Active',
-        completed: 'Completed',
-        postponed: 'Postponed',
-        skipped: 'Skipped',
-        healthRecord: 'Health record',
-        labReport: 'Lab report',
-        prescription: 'Prescription',
-        invoice: 'Invoice',
-        other: 'Other',
-        breakfast: 'Breakfast',
-        lunch: 'Lunch',
-        dinner: 'Dinner',
-        snack: 'Snack',
-        routine: 'Routine',
-        followUp: 'Follow-up',
-        urgent: 'Urgent record',
-        vet: 'Vet',
-        accessories: 'Accessories',
-      );
-    }
-
-    return const _CalendarStrings(
-      eventsShort: 'eventi',
-      today: 'Oggi',
-      dayEvents: 'Eventi del giorno',
-      showWholeMonth: 'Mostra tutto il mese',
-      previousMonth: 'Mese precedente',
-      nextMonth: 'Mese successivo',
-      monthEvents: 'Eventi del mese',
-      legend:
-          'I giorni del calendario sono marcati con i colori dei pet. Se più pet hanno eventi nello stesso giorno, il cerchio è diviso in segmenti colorati. Questa vista non fornisce diagnosi.',
-      medicationOccurrencesNote:
-          'Le terapie farmacologiche sono mostrate come occorrenze giornaliere.',
-      reminder: 'Promemoria',
-      document: 'Documento',
-      weight: 'Peso',
-      healthDiary: 'Diario salute',
-      symptom: 'Sintomo',
-      food: 'Alimentazione',
-      medicationReminder: 'Farmaco',
-      visit: 'Visita',
-      nextVisit: 'Prossima visita',
-      expense: 'Spesa',
-      vaccine: 'Vaccino',
-      antiparasitic: 'Antiparassitario',
-      vetVisit: 'Visita veterinaria',
-      checkup: 'Controllo',
-      medication: 'Farmaco',
-      insurance: 'Assicurazione',
-      grooming: 'Toelettatura',
-      custom: 'Personalizzato',
-      active: 'Attivo',
-      completed: 'Completato',
-      postponed: 'Rimandato',
-      skipped: 'Saltato',
-      healthRecord: 'Libretto sanitario',
-      labReport: 'Referto',
-      prescription: 'Ricetta',
-      invoice: 'Fattura',
-      other: 'Altro',
-      breakfast: 'Colazione',
-      lunch: 'Pranzo',
-      dinner: 'Cena',
-      snack: 'Snack',
-      routine: 'Routine',
-      followUp: 'Follow-up',
-      urgent: 'Registro urgente',
-      vet: 'Veterinario',
-      accessories: 'Accessori',
-    );
-  }
-}
-
-IconData _iconForReminderCategory(ReminderCategory category) {
-  return switch (category) {
-    ReminderCategory.vaccine => Icons.vaccines_outlined,
-    ReminderCategory.antiparasitic => Icons.bug_report_outlined,
-    ReminderCategory.vetVisit => Icons.local_hospital_outlined,
-    ReminderCategory.checkup => Icons.event_available_outlined,
-    ReminderCategory.medication => Icons.medication_outlined,
-    ReminderCategory.insurance => Icons.verified_user_outlined,
-    ReminderCategory.grooming => Icons.content_cut_outlined,
-    ReminderCategory.custom => Icons.notifications_active_outlined,
-  };
-}
-
-String _calendarDayKey(DateTime date) {
-  final month = date.month.toString().padLeft(2, '0');
-  final day = date.day.toString().padLeft(2, '0');
-  return 'calendar-day-${date.year}-$month-$day';
+  static const mutedText = Color(0xFFB4A48F);
 }
 
 DateTime _dateOnly(DateTime value) {
   return DateTime(value.year, value.month, value.day);
 }
 
-String _formatTime(BuildContext context, DateTime date) {
-  final locale = Localizations.localeOf(context).toLanguageTag();
-  return DateFormat.Hm(locale).format(date);
+String _formatWeight(double value) {
+  return value.toStringAsFixed(1);
 }
 
-String _formatWeight(double value) {
-  final fixed = value.toStringAsFixed(2);
+String _formatTime(BuildContext context, DateTime value) {
+  final locale = Localizations.localeOf(context).toLanguageTag();
 
-  if (fixed.endsWith('00')) {
-    return value.toStringAsFixed(0);
-  }
-
-  if (fixed.endsWith('0')) {
-    return value.toStringAsFixed(1);
-  }
-
-  return fixed;
+  return DateFormat.Hm(locale).format(value);
 }
 
 String _capitalize(String value) {
@@ -1749,4 +1368,25 @@ String _capitalize(String value) {
   }
 
   return value[0].toUpperCase() + value.substring(1);
+}
+
+IconData _iconForReminderCategory(ReminderCategory category) {
+  switch (category) {
+    case ReminderCategory.vaccine:
+      return Icons.shield_outlined;
+    case ReminderCategory.antiparasitic:
+      return Icons.water_drop_outlined;
+    case ReminderCategory.vetVisit:
+      return Icons.medical_services_outlined;
+    case ReminderCategory.checkup:
+      return Icons.health_and_safety_outlined;
+    case ReminderCategory.medication:
+      return Icons.medication_liquid_outlined;
+    case ReminderCategory.insurance:
+      return Icons.verified_user_outlined;
+    case ReminderCategory.grooming:
+      return Icons.content_cut_rounded;
+    case ReminderCategory.custom:
+      return Icons.notifications_none_rounded;
+  }
 }
