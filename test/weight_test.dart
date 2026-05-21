@@ -22,71 +22,119 @@ void main() {
     _seedPet();
   });
 
-  testWidgets('User can add and delete a weight entry', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(900, 1200));
-    addTearDown(() async {
-      await tester.binding.setSurfaceSize(null);
-    });
+  testWidgets(
+    'User can add and delete a weight entry',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 1400));
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          reminderNotificationSchedulerProvider.overrideWithValue(
-            FakeReminderNotificationScheduler(),
+      addTearDown(() async {
+        await tester.binding.setSurfaceSize(null);
+      });
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            reminderNotificationSchedulerProvider.overrideWithValue(
+              FakeReminderNotificationScheduler(),
+            ),
+            documentFileServiceProvider.overrideWithValue(
+              FakeDocumentFileService(),
+            ),
+            appDataServiceProvider.overrideWith(
+              (ref) async => FakeAppDataService(),
+            ),
+            notificationPermissionServiceProvider.overrideWithValue(
+              FakeNotificationPermissionService(),
+            ),
+          ],
+          child: const PetLifeApp(
+            locale: Locale('it'),
           ),
-          documentFileServiceProvider.overrideWithValue(
-            FakeDocumentFileService(),
-          ),
-          appDataServiceProvider.overrideWith(
-            (ref) async => FakeAppDataService(),
-          ),
-          notificationPermissionServiceProvider.overrideWithValue(
-            FakeNotificationPermissionService(),
-          ),
-        ],
-        child: const PetLifeApp(
-          locale: Locale('it'),
         ),
-      ),
-    );
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Accetta e continua'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Accetta e continua'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Luna'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Luna'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Peso'), findsOneWidget);
+      expect(find.text('Peso'), findsOneWidget);
 
-    await tester.tap(find.text('Peso'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Peso'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Nessuna misurazione'), findsOneWidget);
-    expect(find.textContaining('non interpreta variazioni di peso'), findsOneWidget);
+      expect(find.text('Nessuna misurazione'), findsOneWidget);
+      expect(
+        find.textContaining('non interpreta variazioni di peso'),
+        findsOneWidget,
+      );
 
-    await tester.enterText(find.byType(TextFormField).at(0), '12,4');
-    await tester.enterText(find.byType(TextFormField).at(1), 'Misurazione mattina');
+      await tester.tap(find.byIcon(Icons.add_rounded).first);
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Salva peso'));
-    await tester.pumpAndSettle();
+      expect(find.text('Nuovo peso'), findsOneWidget);
 
-    expect(find.text('12.4 kg'), findsWidgets);
-    expect(find.text('Misurazione mattina'), findsOneWidget);
+      await tester.enterText(
+        find.byType(TextFormField).at(0),
+        '12,4',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(1),
+        'Misurazione mattina',
+      );
 
-    await tester.tap(find.byIcon(Icons.delete_outline).first);
-    await tester.pumpAndSettle();
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
 
-    expect(find.text('Eliminare questa misurazione?'), findsOneWidget);
+      await tester.tap(find.text('Salva peso'));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Elimina'));
-    await tester.pumpAndSettle();
+      expect(find.text('12.4 kg'), findsWidgets);
+      expect(find.text('Misurazione mattina'), findsOneWidget);
 
-    expect(find.text('Nessuna misurazione'), findsOneWidget);
-  });
+      await tester.tap(find.byIcon(Icons.edit_outlined).first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Modifica peso'), findsOneWidget);
+
+      await tester.enterText(
+        find.byType(TextFormField).at(0),
+        '12,8',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(1),
+        'Aggiornato dopo controllo',
+      );
+
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Aggiorna peso'));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+
+      expect(find.text('12.8 kg'), findsWidgets);
+      expect(find.text('Aggiornato dopo controllo'), findsOneWidget);
+      expect(find.text('Misurazione mattina'), findsNothing);
+
+      await tester.tap(find.byIcon(Icons.delete_outline).first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Eliminare questa misurazione?'), findsOneWidget);
+
+      await tester.tap(find.text('Elimina').last);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nessuna misurazione'), findsOneWidget);
+      expect(find.text('12.8 kg'), findsNothing);
+      expect(find.text('Aggiornato dopo controllo'), findsNothing);
+    },
+  );
 }
 
 void _seedPet() {
@@ -103,8 +151,10 @@ void _seedPet() {
       'sex': 'unknown',
       'microchip': null,
       'vetName': null,
+      'profileImagePath': null,
+      'colorValue': 0xFF20B486,
       'archivedAt': null,
-    }
+    },
   ]);
 
   SharedPreferences.setMockInitialValues({
