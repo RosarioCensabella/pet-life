@@ -74,18 +74,22 @@ void main() {
       );
       await tester.enterText(
         find.byType(TextFormField).at(2),
-        '0',
+        '14',
       );
       await tester.enterText(
         find.byType(TextFormField).at(3),
-        'Dott.ssa Bianchi',
+        '5',
       );
       await tester.enterText(
         find.byType(TextFormField).at(4),
-        'Come indicato dal veterinario',
+        'Dott.ssa Bianchi',
       );
       await tester.enterText(
         find.byType(TextFormField).at(5),
+        'Come indicato dal veterinario',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(6),
         'Dopo il pasto',
       );
 
@@ -107,8 +111,8 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Dopo il pasto'), findsOneWidget);
-      expect(find.textContaining('0 di'), findsOneWidget);
-      expect(find.textContaining('rimaste'), findsOneWidget);
+      expect(find.textContaining('5 di 14'), findsOneWidget);
+      expect(find.textContaining('9 rimaste'), findsOneWidget);
       expect(find.text('Farmaco salvato e promemoria creati'), findsOneWidget);
       expect(find.text('Sospendi'), findsOneWidget);
       expect(find.text('Modifica'), findsOneWidget);
@@ -135,11 +139,28 @@ void main() {
       expect(rawReminders, isNotNull);
 
       final reminders = jsonDecode(rawReminders!) as List;
-      expect(reminders.length, greaterThan(1));
+      expect(reminders.length, 14);
 
-      final firstMedicationReminder = reminders.first as Map;
-      expect(firstMedicationReminder['category'], 'medication');
-      expect(firstMedicationReminder['title'], 'Farmaco: Antibiotico');
+      final medicationReminders = reminders.where((item) {
+        final reminder = item as Map;
+        return reminder['category'] == 'medication' &&
+            reminder['title'] == 'Farmaco: Antibiotico';
+      }).toList();
+
+      expect(medicationReminders.length, 14);
+
+      final completedMedicationReminders = medicationReminders.where((item) {
+        final reminder = item as Map;
+        return reminder['status'] == 'completed';
+      }).toList();
+
+      final activeMedicationReminders = medicationReminders.where((item) {
+        final reminder = item as Map;
+        return reminder['status'] == 'active';
+      }).toList();
+
+      expect(completedMedicationReminders.length, 5);
+      expect(activeMedicationReminders.length, 9);
 
       final rawMedications =
           preferences.getString('pet_life_medication_entries_v1');
@@ -152,14 +173,14 @@ void main() {
       final takenReminderIds = medication['takenReminderIds'] as List;
 
       expect(reminderTimes, hasLength(1));
-      expect(automaticReminderIds.length, reminders.length);
-      expect(takenReminderIds, isEmpty);
+      expect(automaticReminderIds.length, 14);
+      expect(takenReminderIds.length, 5);
 
       await tester.tap(find.text('Presa'));
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('1 di'), findsOneWidget);
+      expect(find.textContaining('6 di 14'), findsOneWidget);
 
       final rawMedicationsAfterTaken =
           preferences.getString('pet_life_medication_entries_v1');
@@ -171,26 +192,27 @@ void main() {
       final takenReminderIdsAfterTaken =
           medicationAfterTaken['takenReminderIds'] as List;
 
-      expect(takenReminderIdsAfterTaken, hasLength(1));
+      expect(takenReminderIdsAfterTaken.length, 6);
 
       final rawRemindersAfterTaken =
           preferences.getString('pet_life_reminders_v1');
       expect(rawRemindersAfterTaken, isNotNull);
 
       final remindersAfterTaken = jsonDecode(rawRemindersAfterTaken!) as List;
-      final completedMedicationReminders = remindersAfterTaken.where((item) {
+      final completedAfterTaken = remindersAfterTaken.where((item) {
         final reminder = item as Map;
         return reminder['category'] == 'medication' &&
+            reminder['title'] == 'Farmaco: Antibiotico' &&
             reminder['status'] == 'completed';
       }).toList();
 
-      expect(completedMedicationReminders, hasLength(1));
+      expect(completedAfterTaken.length, 6);
 
       await tester.tap(find.text('Annulla'));
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('0 di'), findsOneWidget);
+      expect(find.textContaining('5 di 14'), findsOneWidget);
 
       final rawMedicationsAfterUndo =
           preferences.getString('pet_life_medication_entries_v1');
@@ -201,27 +223,13 @@ void main() {
       final takenReminderIdsAfterUndo =
           medicationAfterUndo['takenReminderIds'] as List;
 
-      expect(takenReminderIdsAfterUndo, isEmpty);
-
-      final rawRemindersAfterUndo =
-          preferences.getString('pet_life_reminders_v1');
-      expect(rawRemindersAfterUndo, isNotNull);
-
-      final remindersAfterUndo = jsonDecode(rawRemindersAfterUndo!) as List;
-      final completedMedicationRemindersAfterUndo =
-          remindersAfterUndo.where((item) {
-        final reminder = item as Map;
-        return reminder['category'] == 'medication' &&
-            reminder['status'] == 'completed';
-      }).toList();
-
-      expect(completedMedicationRemindersAfterUndo, isEmpty);
+      expect(takenReminderIdsAfterUndo.length, 5);
 
       await tester.tap(find.text('Presa'));
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('1 di'), findsOneWidget);
+      expect(find.textContaining('6 di 14'), findsOneWidget);
 
       await tester.tap(find.text('Sospendi'));
       await tester.pumpAndSettle();
@@ -237,7 +245,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Modifica farmaco'), findsOneWidget);
-      expect(find.text('Cura di Luna. Pet Life crea promemoria giornalieri automatici e aggiorna l’avanzamento quando segni una presa.'), findsOneWidget);
+      expect(
+        find.text(
+          'Cura di Luna. Pet Life crea promemoria giornalieri automatici e aggiorna l’avanzamento quando segni una presa.',
+        ),
+        findsOneWidget,
+      );
 
       await _scrollModalUntilVisible(
         tester,

@@ -67,7 +67,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
               children: [
                 _ReminderHeader(
                   title: l10n.remindersTitle,
-                  subtitle: '$activeCount ${strings.active}',
+                  subtitle: widget.petId == null
+                      ? '$activeCount ${strings.active} · tutti gli animali'
+                      : '$activeCount ${strings.active}',
                   addLabel: l10n.addReminder,
                   onAdd: _openAddReminder,
                 ),
@@ -126,9 +128,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
           },
         ),
       ),
-      bottomNavigationBar: _ReminderBottomNavigation(
-        currentPetId: widget.petId,
-      ),
+      bottomNavigationBar: const _ReminderBottomNavigation(),
     );
   }
 
@@ -167,7 +167,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     final petId = widget.petId;
 
     if (petId == null) {
-      context.go('/home');
+      context.push('/reminders/new');
       return;
     }
 
@@ -365,8 +365,7 @@ class _FilterChipButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final background =
         selected ? _ReminderPalette.darkText : _ReminderPalette.chip;
-    final foreground =
-        selected ? Colors.white : _ReminderPalette.secondaryText;
+    final foreground = selected ? Colors.white : _ReminderPalette.secondaryText;
 
     return Material(
       color: background,
@@ -481,19 +480,21 @@ class _ReminderTile extends StatelessWidget {
                             reminder.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style:
-                                Theme.of(context).textTheme.titleSmall?.copyWith(
-                                      fontSize: 14,
-                                      height: 1.12,
-                                      fontWeight: FontWeight.w900,
-                                      color: _ReminderPalette.darkText,
-                                      decoration: _isCompleted
-                                          ? TextDecoration.lineThrough
-                                          : TextDecoration.none,
-                                      decorationThickness: 1.8,
-                                      decorationColor:
-                                          _ReminderPalette.secondaryText,
-                                    ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(
+                                  fontSize: 14,
+                                  height: 1.12,
+                                  fontWeight: FontWeight.w900,
+                                  color: _ReminderPalette.darkText,
+                                  decoration: _isCompleted
+                                      ? TextDecoration.lineThrough
+                                      : TextDecoration.none,
+                                  decorationThickness: 1.8,
+                                  decorationColor:
+                                      _ReminderPalette.secondaryText,
+                                ),
                           ),
                           const SizedBox(height: 4),
                           _ReminderMetaLine(
@@ -553,7 +554,8 @@ class _StatusCircle extends StatelessWidget {
   final VoidCallback? onTap;
 
   bool get _isDone {
-    return status == ReminderStatus.completed || status == ReminderStatus.skipped;
+    return status == ReminderStatus.completed ||
+        status == ReminderStatus.skipped;
   }
 
   @override
@@ -830,11 +832,7 @@ class _EmptyReminderList extends StatelessWidget {
 }
 
 class _ReminderBottomNavigation extends StatelessWidget {
-  const _ReminderBottomNavigation({
-    required this.currentPetId,
-  });
-
-  final String? currentPetId;
+  const _ReminderBottomNavigation();
 
   @override
   Widget build(BuildContext context) {
@@ -847,10 +845,7 @@ class _ReminderBottomNavigation extends StatelessWidget {
           case 1:
             context.go('/calendar');
           case 2:
-            final petId = currentPetId;
-            if (petId != null) {
-              context.go('/pets/$petId/reminders');
-            }
+            context.go('/reminders');
           case 3:
             context.go('/settings');
         }
@@ -911,6 +906,7 @@ class _ReminderPalette {
   static const chip = Color(0xFFF3E8D1);
   static const outline = Color(0xFFE3D2B4);
   static const outlineStrong = Color(0xFFE0C89D);
+
   static const darkText = Color(0xFF2D2418);
   static const secondaryText = Color(0xFF8B7A63);
   static const postponed = Color(0xFFA876E8);

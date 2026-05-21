@@ -57,7 +57,8 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stackTrace) => _ErrorState(error: error),
               data: (entries) {
-                final reminders = reminderState.valueOrNull ?? const <Reminder>[];
+                final reminders =
+                    reminderState.valueOrNull ?? const <Reminder>[];
 
                 final petEntries = entries
                     .where((entry) => entry.petId == pet.id)
@@ -117,14 +118,9 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                             pet: pet,
                             entry: entry,
                           ),
-                          onTaken: () => _markNextDoseTaken(
-                            entry,
-                            reminders,
-                          ),
-                          onUndoLastTaken: () => _undoLastDoseTaken(
-                            entry,
-                            reminders,
-                          ),
+                          onTaken: () => _markNextDoseTaken(entry, reminders),
+                          onUndoLastTaken: () =>
+                              _undoLastDoseTaken(entry, reminders),
                         ),
                       ),
                     const SizedBox(height: 12),
@@ -240,24 +236,21 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
         )
         .toList(growable: false);
 
-    final totalDoses = _totalDosesFor(
-      startDate: draft.startDate,
-      endDate: draft.endDate,
-      dailyTimes: reminderTimes.length,
+    final totalDoseCount = math.max(1, draft.totalDoseCount);
+    final completedDoseCount = draft.completedDoseCount.clamp(
+      0,
+      totalDoseCount,
     );
-
-    final completedDoseCount = draft.completedDoseCount.clamp(0, totalDoses);
 
     final reminders = _buildMedicationReminders(
       medicationId: medicationId,
       pet: pet,
       medicationName: draft.name,
-      startDate: draft.startDate,
-      endDate: draft.endDate,
       reminderTimes: reminderTimes,
       instructions: draft.instructions,
       notes: draft.notes,
       prescribedBy: draft.prescribedBy,
+      totalDoseCount: totalDoseCount,
       completedDoseCount: completedDoseCount,
     );
 
@@ -266,8 +259,8 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
         .map((reminder) => reminder.id)
         .toList(growable: false);
 
-    final isCompleted =
-        reminders.isNotEmpty && takenReminderIds.length >= reminders.length;
+    final isCompleted = reminders.isNotEmpty &&
+        takenReminderIds.length >= reminders.length;
 
     final entry = MedicationEntry(
       id: medicationId,
@@ -319,64 +312,138 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     required String medicationId,
     required Pet pet,
     required String medicationName,
-    required DateTime startDate,
-    required DateTime endDate,
     required List<MedicationReminderTime> reminderTimes,
     required String instructions,
     required String notes,
     required String prescribedBy,
+    required int totalDoseCount,
     required int completedDoseCount,
   }) {
     final reminders = <Reminder>[];
     final now = DateTime.now();
-    var currentDay = _dateOnly(startDate);
-    final lastDay = _dateOnly(endDate);
-    var index = 0;
 
-    while (!currentDay.isAfter(lastDay)) {
-      for (final reminderTime in reminderTimes) {
-        final scheduledAt = DateTime(
-          currentDay.year,
-          currentDay.month,
-          currentDay.day,
-          reminderTime.hour,
-          reminderTime.minute,
-        );
+    final safeTotalDoseCount = math.max(0, totalDoseCount);
+    final safeCompletedDoseCount = completedDoseCount.clamp(
+      0,
+      safeTotalDoseCount,
+    );
 
-        final id =
-            '$medicationId-${currentDay.year}${currentDay.month.toString().padLeft(2, '0')}${currentDay.day.toString().padLeft(2, '0')}-${reminderTime.storageKey.replaceAll(':', '')}';
+    final remainingDoseCount = safeTotalDoseCount - safeCompletedDoseCount;
 
-        final isAlreadyTaken = index < completedDoseCount;
+    for (var index = 0; index < safeCompletedDoseCount; index++) {
+      final scheduledAt = _completedPlaceholderDate(
+        now: now,
+        reverseIndex: safeCompletedDoseCount - index,
+      );
 
-        reminders.add(
-          Reminder(
-            id: id,
-            petId: pet.id,
-            petName: pet.name,
-            category: ReminderCategory.medication,
-            title: 'Farmaco: $medicationName',
-            scheduledAt: scheduledAt,
-            status: isAlreadyTaken
-                ? ReminderStatus.completed
-                : ReminderStatus.active,
-            createdAt: now,
-            completedAt: isAlreadyTaken ? now : null,
-            notes: _reminderNotes(
-              prescribedBy: prescribedBy,
-              instructions: instructions,
-              notes: notes,
-            ),
+      reminders.add(
+        Reminder(
+          id: '$medicationId-completed-${index + 1}',
+          petId: pet.id,
+          petName: pet.name,
+          category: ReminderCategory.medication,
+          title: 'Farmaco: $medicationName',
+          scheduledAt: scheduledAt,
+          status: ReminderStatus.completed,
+          createdAt: now,
+          completedAt: now,
+          notes: _reminderNotes(
+            prescribedBy: prescribedBy,
+            instructions: instructions,
+            notes: notes,
           ),
-        );
+        ),
+      );
+    }
 
-        index++;
-      }
+    final futureDoseDates = _futureDoseDatesFromToday(
+      from: now,
+      count: remainingDoseCount,
+      reminderTimes: reminderTimes,
+    );
 
-      currentDay = currentDay.add(const Duration(days: 1));
+    for (var index = 0; index < futureDoseDates.length; index++) {
+      final scheduledAt = futureDoseDates[index];
+
+      final dateKey =
+          '${scheduledAt.year}${scheduledAt.month.toString().padLeft(2, '0')}${scheduledAt.day.toString().padLeft(2, '0')}';
+
+      final timeKey =
+          '${scheduledAt.hour.toString().padLeft(2, '0')}${scheduledAt.minute.toString().padLeft(2, '0')}';
+
+      reminders.add(
+        Reminder(
+          id: '$medicationId-future-${safeCompletedDoseCount + index + 1}-$dateKey-$timeKey',
+          petId: pet.id,
+          petName: pet.name,
+          category: ReminderCategory.medication,
+          title: 'Farmaco: $medicationName',
+          scheduledAt: scheduledAt,
+          status: ReminderStatus.active,
+          createdAt: now,
+          notes: _reminderNotes(
+            prescribedBy: prescribedBy,
+            instructions: instructions,
+            notes: notes,
+          ),
+        ),
+      );
     }
 
     reminders.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
     return reminders;
+  }
+
+  DateTime _completedPlaceholderDate({
+    required DateTime now,
+    required int reverseIndex,
+  }) {
+    final today = DateTime(now.year, now.month, now.day);
+
+    return today.subtract(Duration(days: reverseIndex));
+  }
+
+  List<DateTime> _futureDoseDatesFromToday({
+    required DateTime from,
+    required int count,
+    required List<MedicationReminderTime> reminderTimes,
+  }) {
+    if (count <= 0 || reminderTimes.isEmpty) {
+      return const [];
+    }
+
+    final sortedTimes = [...reminderTimes]
+      ..sort((a, b) {
+        final first = a.hour * 60 + a.minute;
+        final second = b.hour * 60 + b.minute;
+
+        return first.compareTo(second);
+      });
+
+    final dates = <DateTime>[];
+    var day = DateTime(from.year, from.month, from.day);
+
+    while (dates.length < count) {
+      for (final time in sortedTimes) {
+        final scheduledAt = DateTime(
+          day.year,
+          day.month,
+          day.day,
+          time.hour,
+          time.minute,
+        );
+
+        dates.add(scheduledAt);
+
+        if (dates.length >= count) {
+          break;
+        }
+      }
+
+      day = day.add(const Duration(days: 1));
+    }
+
+    return dates;
   }
 
   String? _reminderNotes({
@@ -529,15 +596,6 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Farmaco eliminato')),
     );
-  }
-
-  int _totalDosesFor({
-    required DateTime startDate,
-    required DateTime endDate,
-    required int dailyTimes,
-  }) {
-    final days = _dateOnly(endDate).difference(_dateOnly(startDate)).inDays + 1;
-    return math.max(0, days) * dailyTimes;
   }
 }
 
@@ -933,15 +991,11 @@ class _MedicationCard extends StatelessWidget {
     if (nextReminder != null) {
       final date = DateFormat('d MMM', locale).format(nextReminder.scheduledAt);
       final time = DateFormat.Hm(locale).format(nextReminder.scheduledAt);
+
       return '$dose · prossima $date alle $time';
     }
 
-    final start = DateFormat('d MMM', locale).format(entry.startDate);
-    final end = entry.endDate == null
-        ? 'fine non impostata'
-        : DateFormat('d MMM', locale).format(entry.endDate!);
-
-    return '$dose · dal $start al $end';
+    return '$dose · nessuna assunzione futura';
   }
 
   Color _visibleAccent(Color petColor) {
@@ -1153,6 +1207,7 @@ class _MedicationEditorSheetState extends State<_MedicationEditorSheet> {
 
   late final TextEditingController _nameController;
   late final TextEditingController _dosageController;
+  late final TextEditingController _totalDoseCountController;
   late final TextEditingController _completedDoseCountController;
   late final TextEditingController _prescribedByController;
   late final TextEditingController _instructionsController;
@@ -1164,8 +1219,10 @@ class _MedicationEditorSheetState extends State<_MedicationEditorSheet> {
 
   bool get _isEditing => widget.entry != null;
 
-  int get _totalDoses {
-    final days = _dateOnly(_endDate).difference(_dateOnly(_startDate)).inDays + 1;
+  int get _calculatedTotalDoses {
+    final days =
+        _dateOnly(_endDate).difference(_dateOnly(_startDate)).inDays + 1;
+
     return math.max(0, days) * _times.length;
   }
 
@@ -1175,15 +1232,6 @@ class _MedicationEditorSheetState extends State<_MedicationEditorSheet> {
 
     final entry = widget.entry;
     final now = DateTime.now();
-
-    _nameController = TextEditingController(text: entry?.name ?? '');
-    _dosageController = TextEditingController(text: entry?.dosage ?? '1 compressa');
-    _completedDoseCountController = TextEditingController(
-      text: (entry?.takenDoses ?? 0).toString(),
-    );
-    _prescribedByController = TextEditingController(text: entry?.prescribedBy ?? '');
-    _instructionsController = TextEditingController(text: entry?.instructions ?? '');
-    _notesController = TextEditingController(text: entry?.notes ?? '');
 
     _startDate = entry?.startDate ?? _dateOnly(now);
     _endDate = entry?.endDate ?? _dateOnly(now.add(const Duration(days: 6)));
@@ -1207,12 +1255,28 @@ class _MedicationEditorSheetState extends State<_MedicationEditorSheet> {
     if (_times.isEmpty) {
       _times = const [TimeOfDay(hour: 9, minute: 0)];
     }
+
+    _nameController = TextEditingController(text: entry?.name ?? '');
+    _dosageController =
+        TextEditingController(text: entry?.dosage ?? '1 compressa');
+    _totalDoseCountController = TextEditingController(
+      text: math.max(entry?.totalDoses ?? _calculatedTotalDoses, 1).toString(),
+    );
+    _completedDoseCountController = TextEditingController(
+      text: (entry?.takenDoses ?? 0).toString(),
+    );
+    _prescribedByController =
+        TextEditingController(text: entry?.prescribedBy ?? '');
+    _instructionsController =
+        TextEditingController(text: entry?.instructions ?? '');
+    _notesController = TextEditingController(text: entry?.notes ?? '');
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _dosageController.dispose();
+    _totalDoseCountController.dispose();
     _completedDoseCountController.dispose();
     _prescribedByController.dispose();
     _instructionsController.dispose();
@@ -1293,15 +1357,45 @@ class _MedicationEditorSheetState extends State<_MedicationEditorSheet> {
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
-                    controller: _completedDoseCountController,
+                    controller: _totalDoseCountController,
                     keyboardType: TextInputType.number,
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
                     ],
                     decoration: InputDecoration(
-                      labelText: 'Prese già effettuate',
-                      helperText: 'Totale previsto: $_totalDoses assunzioni',
+                      labelText: 'Totale assunzioni previste',
+                      hintText: 'Es. 14',
+                      helperText:
+                          'Calcolo da date/orari: $_calculatedTotalDoses assunzioni',
                       border: const OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      final raw = value?.trim() ?? '';
+
+                      if (raw.isEmpty) {
+                        return 'Inserisci il totale delle assunzioni';
+                      }
+
+                      final parsed = int.tryParse(raw);
+
+                      if (parsed == null || parsed <= 0) {
+                        return 'Inserisci un numero maggiore di zero';
+                      }
+
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _completedDoseCountController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    decoration: const InputDecoration(
+                      labelText: 'Prese già effettuate',
+                      hintText: 'Es. 5',
+                      border: OutlineInputBorder(),
                     ),
                     validator: (value) {
                       final raw = value?.trim() ?? '';
@@ -1311,12 +1405,14 @@ class _MedicationEditorSheetState extends State<_MedicationEditorSheet> {
                       }
 
                       final parsed = int.tryParse(raw);
+                      final total =
+                          int.tryParse(_totalDoseCountController.text) ?? 0;
 
                       if (parsed == null || parsed < 0) {
                         return 'Inserisci un numero valido';
                       }
 
-                      if (parsed > _totalDoses) {
+                      if (parsed > total) {
                         return 'Non può superare il totale previsto';
                       }
 
@@ -1487,6 +1583,7 @@ class _MedicationEditorSheetState extends State<_MedicationEditorSheet> {
     for (final time in times) {
       final key =
           '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+
       byKey[key] = time;
     }
 
@@ -1495,6 +1592,7 @@ class _MedicationEditorSheetState extends State<_MedicationEditorSheet> {
     sorted.sort((a, b) {
       final first = a.hour * 60 + a.minute;
       final second = b.hour * 60 + b.minute;
+
       return first.compareTo(second);
     });
 
@@ -1513,6 +1611,7 @@ class _MedicationEditorSheetState extends State<_MedicationEditorSheet> {
         _MedicationDraft(
           name: _nameController.text.trim(),
           dosage: _dosageController.text.trim(),
+          totalDoseCount: int.parse(_totalDoseCountController.text),
           completedDoseCount: int.parse(_completedDoseCountController.text),
           prescribedBy: _prescribedByController.text.trim(),
           instructions: _instructionsController.text.trim(),
@@ -1742,6 +1841,7 @@ class _MedicationDraft {
   const _MedicationDraft({
     required this.name,
     required this.dosage,
+    required this.totalDoseCount,
     required this.completedDoseCount,
     required this.prescribedBy,
     required this.instructions,
@@ -1753,6 +1853,7 @@ class _MedicationDraft {
 
   final String name;
   final String dosage;
+  final int totalDoseCount;
   final int completedDoseCount;
   final String prescribedBy;
   final String instructions;

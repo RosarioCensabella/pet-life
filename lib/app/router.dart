@@ -38,6 +38,17 @@ GoRouter buildAppRouter() {
         path: '/calendar',
         builder: (context, state) => const CalendarScreen(),
       ),
+
+      // Promemoria globale: mostra i reminder di tutti gli animali.
+      GoRoute(
+        path: '/reminders',
+        builder: (context, state) => const RemindersScreen(),
+      ),
+      GoRoute(
+        path: '/reminders/new',
+        builder: (context, state) => const AddReminderScreen(),
+      ),
+
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
@@ -46,7 +57,6 @@ GoRouter buildAppRouter() {
         path: '/settings/legal/:type',
         builder: (context, state) {
           final type = state.pathParameters['type'] ?? 'privacy';
-
           return LegalDocumentScreen(type: type);
         },
       ),
@@ -62,7 +72,6 @@ GoRouter buildAppRouter() {
         path: '/pets/:petId',
         builder: (context, state) {
           final petId = state.pathParameters['petId']!;
-
           return PetDashboardScreen(petId: petId);
         },
       ),
@@ -70,7 +79,6 @@ GoRouter buildAppRouter() {
         path: '/pets/:petId/edit',
         builder: (context, state) {
           final petId = state.pathParameters['petId']!;
-
           return EditPetScreen(petId: petId);
         },
       ),
@@ -78,7 +86,6 @@ GoRouter buildAppRouter() {
         path: '/pets/:petId/reminders',
         builder: (context, state) {
           final petId = state.pathParameters['petId']!;
-
           return RemindersScreen(petId: petId);
         },
       ),
@@ -86,7 +93,6 @@ GoRouter buildAppRouter() {
         path: '/pets/:petId/reminders/new',
         builder: (context, state) {
           final petId = state.pathParameters['petId']!;
-
           return AddReminderScreen(petId: petId);
         },
       ),
@@ -94,7 +100,6 @@ GoRouter buildAppRouter() {
         path: '/pets/:petId/documents',
         builder: (context, state) {
           final petId = state.pathParameters['petId']!;
-
           return DocumentsScreen(petId: petId);
         },
       ),
@@ -102,7 +107,6 @@ GoRouter buildAppRouter() {
         path: '/pets/:petId/documents/new',
         builder: (context, state) {
           final petId = state.pathParameters['petId']!;
-
           return AddDocumentScreen(petId: petId);
         },
       ),
@@ -110,7 +114,6 @@ GoRouter buildAppRouter() {
         path: '/pets/:petId/weight',
         builder: (context, state) {
           final petId = state.pathParameters['petId']!;
-
           return WeightScreen(petId: petId);
         },
       ),
@@ -118,7 +121,6 @@ GoRouter buildAppRouter() {
         path: '/pets/:petId/health-diary',
         builder: (context, state) {
           final petId = state.pathParameters['petId']!;
-
           return HealthScreen(
             petId: petId,
             initialType: HealthEntryType.diary,
@@ -129,7 +131,6 @@ GoRouter buildAppRouter() {
         path: '/pets/:petId/symptoms',
         builder: (context, state) {
           final petId = state.pathParameters['petId']!;
-
           return HealthScreen(
             petId: petId,
             initialType: HealthEntryType.symptom,
@@ -140,7 +141,6 @@ GoRouter buildAppRouter() {
         path: '/pets/:petId/food',
         builder: (context, state) {
           final petId = state.pathParameters['petId']!;
-
           return FoodScreen(petId: petId);
         },
       ),
@@ -148,7 +148,6 @@ GoRouter buildAppRouter() {
         path: '/pets/:petId/medications',
         builder: (context, state) {
           final petId = state.pathParameters['petId']!;
-
           return MedicationsScreen(petId: petId);
         },
       ),
@@ -156,7 +155,6 @@ GoRouter buildAppRouter() {
         path: '/pets/:petId/visits',
         builder: (context, state) {
           final petId = state.pathParameters['petId']!;
-
           return VisitsScreen(petId: petId);
         },
       ),
@@ -164,7 +162,6 @@ GoRouter buildAppRouter() {
         path: '/pets/:petId/expenses',
         builder: (context, state) {
           final petId = state.pathParameters['petId']!;
-
           return ExpensesScreen(petId: petId);
         },
       ),
@@ -172,7 +169,6 @@ GoRouter buildAppRouter() {
         path: '/pets/:petId/reports',
         builder: (context, state) {
           final petId = state.pathParameters['petId']!;
-
           return NonDiagnosticReportScreen(petId: petId);
         },
       ),

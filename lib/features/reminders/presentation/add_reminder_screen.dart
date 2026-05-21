@@ -12,11 +12,11 @@ import '../domain/reminder.dart';
 
 class AddReminderScreen extends ConsumerStatefulWidget {
   const AddReminderScreen({
-    required this.petId,
+    this.petId,
     super.key,
   });
 
-  final String petId;
+  final String? petId;
 
   @override
   ConsumerState<AddReminderScreen> createState() => _AddReminderScreenState();
@@ -132,6 +132,11 @@ class _AddReminderScreenState extends ConsumerState<AddReminderScreen> {
 
     if (context.canPop()) {
       context.pop();
+      return;
+    }
+
+    if (widget.petId == null) {
+      context.go('/reminders');
     } else {
       context.go('/pets/${selectedPet.id}/reminders');
     }
@@ -170,8 +175,8 @@ class _AddReminderScreenState extends ConsumerState<AddReminderScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final petsState = ref.watch(petControllerProvider);
     final locale = Localizations.localeOf(context).toLanguageTag();
+    final petsState = ref.watch(petControllerProvider);
 
     final selectedDateLabel = DateFormat.yMMMd(locale).format(_selectedDate);
     final selectedTimeLabel = _selectedTime.format(context);
@@ -221,10 +226,6 @@ class _AddReminderScreenState extends ConsumerState<AddReminderScreen> {
                         )
                         .toList(growable: false),
                     onChanged: (value) {
-                      if (value == null) {
-                        return;
-                      }
-
                       setState(() {
                         _selectedPetId = value;
                       });
